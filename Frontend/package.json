@@ -14,6 +14,7 @@
     "@cloudinary/url-gen": "^1.22.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
     "@reduxjs/toolkit": "^2.9.0",
     "axios": "^1.12.2",
@@ -34,9 +35,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
-    "vite": "npm:rolldown-vite@7.1.12"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.1.12"
+    "tailwindcss": "^3.4.17",
+    "vite": "npm:rolldown-vite@^7.1.12"
   }
 }
