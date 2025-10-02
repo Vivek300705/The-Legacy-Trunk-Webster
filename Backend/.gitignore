@@ -48,7 +48,7 @@ media/
 # Coverage
 coverage/
 *.lcov
-
+serviceAccountKey.json
 # Optional: Debug files
 *.swp
 *.swo

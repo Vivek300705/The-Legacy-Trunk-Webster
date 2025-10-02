@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Container,
   Paper,
@@ -26,313 +26,391 @@ import {
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axiosConfig";
 
 const Profile = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState("John Doe");
-  const [role, setRole] = useState("Family Historian");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Mock family connections data
-  const familyConnections = {
-    parents: [
-      { id: 1, name: "Robert Doe", avatar: "" },
-      { id: 2, name: "Mary Doe", avatar: "" },
-    ],
-    spouse: [{ id: 3, name: "Jane Doe", avatar: "" }],
-    siblings: [
-      { id: 4, name: "Sarah Doe", avatar: "" },
-      { id: 5, name: "Michael Doe", avatar: "" },
-    ],
+  const [userData, setUserData] = useState(null);
+  const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState("");
+  const [originalName, setOriginalName] = useState("");
+  const [originalRole, setOriginalRole] = useState("");
+
+  const [relationships, setRelationships] = useState({
+    parents: [],
+    children: [],
+    spouse: [],
+    siblings: [],
+    grandparents: [],
+    grandchildren: [],
+  });
+
+  const [recentStories, setRecentStories] = useState([]);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        const profileResponse = await api.get("/user/profile");
+        const profile = profileResponse.data;
+        setUserData(profile);
+        setDisplayName(profile.name || "");
+        setOriginalName(profile.name || "");
+        setRole(profile.role || "");
+        setOriginalRole(profile.role || "");
+
+        const relationshipsResponse = await api.get("/relationships/approved");
+        setRelationships(relationshipsResponse.data);
+
+       const storiesResponse = await api.get("/stories/user?limit=4");
+        setRecentStories(storiesResponse.data.stories || []);
+      } catch (err) {
+        console.error("Error fetching profile data:", err);
+        setError("Failed to load profile data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) fetchProfileData();
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    try {
+      setError("");
+      setSuccess("");
+      const response = await api.put("/user/profile", {
+        name: displayName,
+        role,
+      });
+      setUserData(response.data);
+      setOriginalName(displayName);
+      setOriginalRole(role);
+      setIsEditing(false);
+      setSuccess("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      setError("Failed to update profile");
+    }
   };
 
-  // Mock recent stories data
-  const recentStories = [
-    {
-      id: 1,
-      title: "Summer Vacation 1985",
-      date: "2024-03-15",
-      author: "John Doe",
-    },
-    {
-      id: 2,
-      title: "Grandma's Secret Recipe",
-      date: "2024-03-10",
-      author: "John Doe",
-    },
-    {
-      id: 3,
-      title: "Family Reunion 2023",
-      date: "2024-03-05",
-      author: "John Doe",
-    },
-    {
-      id: 4,
-      title: "Childhood Memories",
-      date: "2024-02-28",
-      author: "John Doe",
-    },
-  ];
-
-  const handlePersonClick = (personId) => {
-    navigate(`/profile/${personId}`);
+  const handleCancelEdit = () => {
+    setDisplayName(originalName);
+    setRole(originalRole);
+    setIsEditing(false);
+    setError("");
   };
 
-  const handleStoryClick = (storyId) => {
-    navigate(`/story-detail?id=${storyId}`);
+  const handlePersonClick = (personId) => navigate(`/profile/${personId}`);
+  const handleStoryClick = (storyId) => navigate(`/story-detail?id=${storyId}`);
+
+  const renderRelationshipSection = (title, people) => {
+    if (!people || people.length === 0) return null;
+
+    return (
+      <Box>
+        <Typography
+          variant="subtitle2"
+          sx={{ mb: 1.5, fontWeight: 600, color: "text.secondary" }}
+        >
+          {title}
+        </Typography>
+        <List sx={{ p: 0 }}>
+          {people.map((person) => (
+            <ListItem
+              key={person.id}
+              button
+              onClick={() => handlePersonClick(person.id)}
+              sx={{
+                borderRadius: 1,
+                mb: 0.5,
+                px: 1.5,
+                py: 1,
+                "&:hover": { bgcolor: "action.hover" },
+              }}
+            >
+              <ListItemAvatar sx={{ minWidth: 40 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: "primary.main",
+                    width: 32,
+                    height: 32,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {person.name.charAt(0)}
+                </Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={person.name}
+                primaryTypographyProps={{ variant: "body2" }}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    );
   };
+
+  if (loading) return <Typography sx={{ p: 4 }}>Loading...</Typography>;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Profile Header */}
-      <Paper sx={{ p: 4, mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            mb: 4,
-          }}
-        >
-          <Avatar
+    <Container
+      maxWidth="xl"
+      sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}
+    >
+      <Grid container spacing={4}>
+        {/* Left Column */}
+        <Grid item xs={12} lg={4}>
+          <Paper
             sx={{
-              width: 150,
-              height: 150,
-              mb: 3,
-              bgcolor: "primary.main",
-              fontSize: "4rem",
+              p: { xs: 3, md: 4 },
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            {displayName.charAt(0)}
-          </Avatar>
-          <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-            {displayName}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            {user?.email}
-          </Typography>
-          <Chip label={role} color="primary" size="medium" />
-        </Box>
-
-        {/* Profile Information */}
-        <Box sx={{ maxWidth: 500, mx: "auto", mb: 3 }}>
-          <TextField
-            fullWidth
-            label="Display Name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            disabled={!isEditing}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Role"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            disabled={!isEditing}
-            sx={{ mb: 2 }}
-          />
-        </Box>
-
-        {/* Action Buttons */}
-        <Box sx={{ display: "flex", gap: 2, justifyContent: "center" }}>
-          {!isEditing ? (
-            <Button
-              variant="contained"
-              startIcon={<Edit />}
-              onClick={() => setIsEditing(true)}
-              size="large"
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                mb: 4,
+              }}
             >
-              Edit Profile
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                startIcon={<Save />}
-                onClick={() => setIsEditing(false)}
-                size="large"
+              <Avatar
+                sx={{
+                  width: { xs: 120, md: 150 },
+                  height: { xs: 120, md: 150 },
+                  mb: 2,
+                  bgcolor: "primary.main",
+                  fontSize: { xs: "3rem", md: "4rem" },
+                }}
               >
-                Save Changes
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<Cancel />}
-                onClick={() => setIsEditing(false)}
-                size="large"
+                {displayName?.charAt(0) || "U"}
+              </Avatar>
+              <Typography
+                variant="h4"
+                sx={{ fontWeight: 700, mb: 0.5, textAlign: "center" }}
               >
-                Cancel
-              </Button>
-            </>
-          )}
-        </Box>
-      </Paper>
+                {displayName}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2, textAlign: "center" }}
+              >
+                {user?.email}
+              </Typography>
+              <Chip label={role} color="primary" />
+            </Box>
 
-      {/* Family Connections and Recent Stories */}
-      <Grid container spacing={3}>
-        {/* Family Connections */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                <FamilyRestroom
-                  sx={{ fontSize: 32, color: "primary.main", mr: 1 }}
-                />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Family Connections
-                </Typography>
-              </Box>
+            <Divider sx={{ mb: 3 }} />
 
-              {/* Parents */}
-              <Box sx={{ mb: 3 }}>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
-                >
-                  Parents
-                </Typography>
-                <List>
-                  {familyConnections.parents.map((parent) => (
-                    <ListItem
-                      key={parent.id}
-                      button
-                      onClick={() => handlePersonClick(parent.id)}
-                      sx={{ borderRadius: 1, mb: 1 }}
+            <Box sx={{ flex: 1 }}>
+              <TextField
+                fullWidth
+                label="Display Name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                disabled={!isEditing}
+                size="small"
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                label="Role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                disabled={!isEditing}
+                size="small"
+                sx={{ mb: 3 }}
+              />
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                {!isEditing ? (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<Edit />}
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<Save />}
+                      onClick={handleSaveProfile}
                     >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: "primary.main" }}>
-                          {parent.name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText primary={parent.name} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Spouse */}
-              <Box sx={{ mb: 3 }}>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
-                >
-                  Spouse
-                </Typography>
-                <List>
-                  {familyConnections.spouse.map((spouse) => (
-                    <ListItem
-                      key={spouse.id}
-                      button
-                      onClick={() => handlePersonClick(spouse.id)}
-                      sx={{ borderRadius: 1, mb: 1 }}
+                      Save Changes
+                    </Button>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      startIcon={<Cancel />}
+                      onClick={handleCancelEdit}
                     >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: "primary.main" }}>
-                          {spouse.name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText primary={spouse.name} />
-                    </ListItem>
-                  ))}
-                </List>
+                      Cancel
+                    </Button>
+                  </>
+                )}
               </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Siblings */}
-              <Box>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 2, fontWeight: 600, color: "text.secondary" }}
-                >
-                  Siblings
-                </Typography>
-                <List>
-                  {familyConnections.siblings.map((sibling) => (
-                    <ListItem
-                      key={sibling.id}
-                      button
-                      onClick={() => handlePersonClick(sibling.id)}
-                      sx={{ borderRadius: 1, mb: 1 }}
-                    >
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: "primary.main" }}>
-                          {sibling.name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText primary={sibling.name} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </Paper>
         </Grid>
 
-        {/* Recent Stories */}
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                <AutoStories
-                  sx={{ fontSize: 32, color: "primary.main", mr: 1 }}
-                />
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Recent Stories
-                </Typography>
-              </Box>
-
-              <List>
-                {recentStories.map((story) => (
-                  <ListItem
-                    key={story.id}
-                    button
-                    onClick={() => handleStoryClick(story.id)}
-                    sx={{
-                      borderRadius: 1,
-                      mb: 2,
-                      border: 1,
-                      borderColor: "divider",
-                      "&:hover": {
-                        bgcolor: "action.hover",
-                      },
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: "secondary.main" }}>
-                        <AutoStories />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={story.title}
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            By {story.author}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {new Date(story.date).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                      }
+        {/* Right Column */}
+        <Grid item xs={12} lg={8}>
+          <Grid container spacing={3}>
+            {/* Family Connections */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <FamilyRestroom
+                      sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
                     />
-                  </ListItem>
-                ))}
-              </List>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Family Connections
+                    </Typography>
+                  </Box>
 
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => navigate("/timeline")}
-                sx={{ mt: 2 }}
-              >
-                View All Stories
-              </Button>
-            </CardContent>
-          </Card>
+                  <Grid container spacing={2}>
+                    {relationships.parents?.length > 0 && (
+                      <Grid item xs={12} sm={6} md={4}>
+                        {renderRelationshipSection(
+                          "Parents",
+                          relationships.parents
+                        )}
+                      </Grid>
+                    )}
+                    {relationships.spouse?.length > 0 && (
+                      <Grid item xs={12} sm={6} md={4}>
+                        {renderRelationshipSection(
+                          "Spouse",
+                          relationships.spouse
+                        )}
+                      </Grid>
+                    )}
+                    {relationships.siblings?.length > 0 && (
+                      <Grid item xs={12} sm={6} md={4}>
+                        {renderRelationshipSection(
+                          "Siblings",
+                          relationships.siblings
+                        )}
+                      </Grid>
+                    )}
+                  </Grid>
+
+                  {!relationships.parents?.length &&
+                    !relationships.spouse?.length &&
+                    !relationships.siblings?.length && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ textAlign: "center", py: 3 }}
+                      >
+                        No family connections yet
+                      </Typography>
+                    )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Recent Stories */}
+            <Grid item xs={12}>
+              <Card>
+                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+                    <AutoStories
+                      sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
+                    />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Recent Stories
+                    </Typography>
+                  </Box>
+
+                  {recentStories.length > 0 ? (
+                    <>
+                      <List sx={{ p: 0 }}>
+                        {recentStories.map((story, index) => (
+                          <Box key={story.id}>
+                            <ListItem
+                              button
+                              onClick={() => handleStoryClick(story.id)}
+                              sx={{
+                                borderRadius: 1,
+                                px: 2,
+                                py: 1.5,
+                                "&:hover": { bgcolor: "action.hover" },
+                              }}
+                            >
+                              <ListItemAvatar>
+                                <Avatar sx={{ bgcolor: "secondary.main" }}>
+                                  <AutoStories />
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={story.title}
+                                secondary={
+                                  <Box>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      By {story.author}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {new Date(
+                                        story.date
+                                      ).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
+                            </ListItem>
+                            {index < recentStories.length - 1 && (
+                              <Divider sx={{ my: 1 }} />
+                            )}
+                          </Box>
+                        ))}
+                      </List>
+
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        onClick={() => navigate("/timeline")}
+                        sx={{ mt: 3 }}
+                      >
+                        View All Stories
+                      </Button>
+                    </>
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ textAlign: "center", py: 3 }}
+                    >
+                      No stories yet
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Container>

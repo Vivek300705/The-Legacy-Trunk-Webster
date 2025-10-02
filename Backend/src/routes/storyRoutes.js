@@ -1,22 +1,37 @@
-import express from 'express';
-// Import the new functions
-import { createStory, getStoriesForFamily, updateStory, deleteStory } from '../controllers/storyController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
+import express from "express";
+import {
+  createStory,
+  getStoriesForFamily,
+  updateStory,
+  deleteStory,
+  getUserStories,
+  getFamilyCircleStories,
+} from "../controllers/storyController.js";
+import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Routes for creating and getting stories (already exist)
-router.post('/', authMiddleware, createStory);
-router.get('/', authMiddleware, getStoriesForFamily);
+// All routes require authentication
+router.use(authMiddleware);
 
-// 👇 Add these new routes for updating and deleting a specific story
-// The ':storyId' is a URL parameter that tells us which story to target
+// ⚠️ IMPORTANT: Specific routes MUST come before generic ones
 
-// Example Frontend URL: PATCH /api/stories/633c5e8f12a4...
-router.patch('/:storyId', authMiddleware, updateStory);
+// Get user's own stories
+router.get("/user", getUserStories);
 
-// Example Frontend URL: DELETE /api/stories/633c5e8f12a4...
-router.delete('/:storyId', authMiddleware, deleteStory);
+// Get stories for user's family circle
+router.get("/family-circle", getFamilyCircleStories);
 
+// Create a new story
+router.post("/", createStory);
+
+// Update a specific story
+router.patch("/:storyId", updateStory);
+
+// Delete a specific story
+router.delete("/:storyId", deleteStory);
+
+// Get stories for a specific family (by familyId) - MOVE TO END
+router.get("/", getStoriesForFamily);
 
 export default router;

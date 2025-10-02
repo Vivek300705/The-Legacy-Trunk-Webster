@@ -1,12 +1,15 @@
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
   Typography,
   Card,
   CardContent,
-  CardActions,
   Button,
+  CircularProgress,
+  Alert,
   Avatar,
+  AvatarGroup,
 } from "@mui/material";
 import {
   Add,
@@ -17,14 +20,50 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import api from "../api/axiosConfig";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+  const [userData, setUserData] = useState(null);
+  const [recentStories, setRecentStories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Mock data - replace with actual data from backend
-  const familyCircles = [];
-  const isNewUser = familyCircles.length === 0;
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch user profile with populated family circle
+        const profileResponse = await api.get("/user/profile");
+        setUserData(profileResponse.data);
+
+        // Fetch recent stories if user has a family circle
+        if (profileResponse.data.familyCircle) {
+          try {
+            const storiesResponse = await api.get(
+              "/stories/family-circle?limit=3"
+            );
+            setRecentStories(storiesResponse.data.stories || []);
+          } catch (storyErr) {
+            console.log("No stories found:", storyErr);
+            setRecentStories([]);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const isNewUser = !userData?.familyCircle;
+  const familyCircle = userData?.familyCircle;
 
   const quickActions = [
     {
@@ -51,11 +90,25 @@ const Dashboard = () => {
     },
   ];
 
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4, textAlign: "center" }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
+      )}
+
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" sx={{ mb: 1, fontWeight: 700 }}>
-          Welcome back, {user?.email?.split("@")[0] || "Friend"}!
+          Welcome back, {userData?.name || "Friend"}!
         </Typography>
         <Typography variant="h6" color="text.secondary">
           Continue building your family legacy
@@ -122,8 +175,8 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-      {/* Family Circles */}
-      <Box>
+      {/* Family Circle Section */}
+      <Box sx={{ mb: 6 }}>
         <Box
           sx={{
             display: "flex",
@@ -133,15 +186,15 @@ const Dashboard = () => {
           }}
         >
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Your Family Circles
+            Your Family Circle
           </Typography>
           {!isNewUser && (
             <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => navigate("/family-circle/new")}
+              variant="outlined"
+              startIcon={<Group />}
+              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
             >
-              New Circle
+              Manage Circle
             </Button>
           )}
         </Box>
@@ -177,18 +230,86 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
+          <Card
+            sx={{
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "translateY(-4px)",
+                boxShadow: 4,
+              },
+            }}
+            onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
+          >
+            <CardContent>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                <Group sx={{ fontSize: 32, color: "primary.main", mr: 2 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {familyCircle?.name || "My Family"}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {familyCircle?.member?.length || 0} members
+                  </Typography>
+                </Box>
+                {familyCircle?.member && familyCircle.member.length > 0 && (
+                  <AvatarGroup max={4}>
+                    {familyCircle.member.map((member) => (
+                      <Avatar
+                        key={member._id}
+                        alt={member.name}
+                        src={member.profilePictur}
+                        sx={{ width: 32, height: 32 }}
+                      >
+                        {member.name?.charAt(0)}
+                      </Avatar>
+                    ))}
+                  </AvatarGroup>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+      </Box>
+
+      {/* Recent Stories Section */}
+      {!isNewUser && recentStories.length > 0 && (
+        <Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Recent Stories
+            </Typography>
+            <Button
+              variant="text"
+              endIcon={<Timeline />}
+              onClick={() => navigate("/timeline")}
+            >
+              View All
+            </Button>
+          </Box>
+
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-              gap: 3,
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "1fr 1fr",
+                md: "1fr 1fr 1fr",
+              },
+              gap: 2,
             }}
           >
-            {familyCircles.map((circle) => (
+            {recentStories.map((story) => (
               <Card
-                key={circle.id}
+                key={story._id}
                 sx={{
-                  height: "100%",
                   cursor: "pointer",
                   transition: "all 0.3s ease",
                   "&:hover": {
@@ -196,55 +317,48 @@ const Dashboard = () => {
                     boxShadow: 4,
                   },
                 }}
-                onClick={() => navigate(`/family-circle/${circle.id}`)}
+                onClick={() => navigate(`/story-detail?id=${story._id}`)}
               >
                 <CardContent>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <Group
-                      sx={{ fontSize: 32, color: "primary.main", mr: 2 }}
-                    />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {circle.name}
+                    <Avatar
+                      src={story.author?.profilePictur}
+                      sx={{ width: 32, height: 32, mr: 1 }}
+                    >
+                      {story.author?.name?.charAt(0)}
+                    </Avatar>
+                    <Typography variant="caption" color="text.secondary">
+                      {story.author?.name}
                     </Typography>
                   </Box>
+                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                    {story.title}
+                  </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ mb: 1 }}
+                    sx={{
+                      mb: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
                   >
-                    {circle.members} members
+                    {story.content}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {circle.stories} stories shared
+                  <Typography variant="caption" color="text.secondary">
+                    {story.eventDate
+                      ? new Date(story.eventDate).toLocaleDateString()
+                      : new Date(story.createdAt).toLocaleDateString()}
                   </Typography>
                 </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    color="primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/family-circle/${circle.id}`);
-                    }}
-                  >
-                    View Circle
-                  </Button>
-                  <Button
-                    size="small"
-                    color="primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate("/story-editor");
-                    }}
-                  >
-                    Add Story
-                  </Button>
-                </CardActions>
               </Card>
             ))}
           </Box>
-        )}
-      </Box>
+        </Box>
+      )}
     </Container>
   );
 };
