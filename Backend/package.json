@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
@@ -10,7 +11,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "@google-cloud/vision": "^5.3.3",
     "bcryptjs": "^3.0.2",
@@ -18,9 +18,11 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "firebase": "^12.3.0",
     "firebase-admin": "^13.5.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.3",
+    "multer": "^2.0.2",
     "openai": "^5.23.1",
     "pdfkit": "^0.17.2",
     "puppeteer": "^24.22.3"
