@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Container,
   Box,
@@ -6,36 +8,111 @@ import {
   Stack,
   Paper,
   Divider,
+  CircularProgress,
+  Alert,
+  IconButton,
+  Menu,
+  MenuItem,
 } from "@mui/material";
-import { Person, CalendarToday, Label } from "@mui/icons-material";
+import {
+  Person,
+  CalendarToday,
+  Label,
+  MoreVert,
+  Edit,
+  Delete,
+} from "@mui/icons-material";
+import { getStoryById, deleteStory } from "../api/services";
 
 const StoryDetail = () => {
-  // Sample story data
-  const story = {
-    title: "Our Wedding Day - A Love Story",
-    author: "Grandma Rose",
-    date: "1985-06-15",
-    tags: ["wedding", "milestone", "love", "family"],
-    content: `It was a beautiful summer day when John and I said "I do." The sun was shining, the birds were singing, and our families surrounded us with so much love and joy.
+  const { storyId } = useParams();
+  const navigate = useNavigate();
+  const [story, setStory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
 
-I remember being so nervous that morning. My hands were shaking as my mother helped me into my dress - the same dress her mother had worn decades before. It felt like wearing a piece of family history, a connection to all the love stories that came before ours.
+  useEffect(() => {
+    fetchStory();
+  }, [storyId]);
 
-The ceremony was held in the small chapel where John's parents had married. As I walked down the aisle, I saw John waiting for me, and suddenly all my nervousness melted away. In that moment, I knew I was exactly where I was meant to be.
-
-Our first dance was to "Unforgettable" by Nat King Cole. John held me close and whispered that he would love me forever. Fifty years later, he's kept that promise every single day.`,
-    media: [
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800",
-        caption: "Our first dance as husband and wife",
-      },
-      {
-        type: "image",
-        url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800",
-        caption: "Cutting the cake together",
-      },
-    ],
+  const fetchStory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getStoryById(storyId);
+      console.log("Story fetched:", data);
+      setStory(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load story");
+      console.error("Error fetching story:", err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleEdit = () => {
+    handleMenuClose();
+    console.log("Navigating to edit story:", storyId);
+    navigate(`/story-editor?id=${storyId}`);
+  };
+
+  const handleDelete = async () => {
+    handleMenuClose();
+    if (window.confirm("Are you sure you want to delete this story?")) {
+      try {
+        await deleteStory(storyId);
+        navigate("/timeline");
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to delete story");
+        console.error("Error deleting story:", err);
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#FFFBF5",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
+        <Container maxWidth="md">
+          <Alert severity="error">{error}</Alert>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (!story) {
+    return (
+      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
+        <Container maxWidth="md">
+          <Alert severity="info">Story not found</Alert>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
@@ -45,14 +122,42 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
             p: { xs: 3, md: 6 },
             borderRadius: 4,
             backgroundColor: "white",
+            position: "relative",
           }}
         >
+          {/* Action Menu */}
+          <IconButton
+            sx={{
+              position: "absolute",
+              top: 16,
+              right: 16,
+            }}
+            onClick={handleMenuOpen}
+          >
+            <MoreVert />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+          >
+            <MenuItem onClick={handleEdit}>
+              <Edit sx={{ mr: 1 }} fontSize="small" />
+              Edit
+            </MenuItem>
+            <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+              <Delete sx={{ mr: 1 }} fontSize="small" />
+              Delete
+            </MenuItem>
+          </Menu>
+
           {/* Header */}
           <Typography
             variant="h3"
             component="h1"
             sx={{
               mb: 3,
+              pr: 6,
               fontWeight: 700,
               fontFamily: "Georgia, serif",
               color: "text.primary",
@@ -75,7 +180,7 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
           >
             <Chip
               icon={<Person />}
-              label={`By ${story.author}`}
+              label={`By ${story.author?.name || story.author || "Anonymous"}`}
               sx={{
                 backgroundColor: "primary.light",
                 color: "white",
@@ -84,11 +189,14 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
             />
             <Chip
               icon={<CalendarToday />}
-              label={new Date(story.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              label={new Date(story.date || story.createdAt).toLocaleDateString(
+                "en-US",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                }
+              )}
               variant="outlined"
               sx={{ borderColor: "primary.main", color: "text.primary" }}
             />
@@ -115,16 +223,17 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
           </Box>
 
           {/* Media Gallery */}
-          {story.media.length > 0 && (
+          {story.media && story.media.length > 0 && (
             <Box sx={{ my: 5 }}>
               {story.media.map((item, index) => (
                 <Box key={index} sx={{ mb: 4 }}>
-                  {item.type === "image" && (
+                  {(item.type === "image" ||
+                    item.mimeType?.startsWith("image/")) && (
                     <Box>
                       <Box
                         component="img"
-                        src={item.url}
-                        alt={item.caption}
+                        src={item.url || item.fileUrl}
+                        alt={item.caption || item.description}
                         sx={{
                           width: "100%",
                           borderRadius: 2,
@@ -132,21 +241,24 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
                           mb: 1,
                         }}
                       />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: "block",
-                          textAlign: "center",
-                          fontStyle: "italic",
-                          color: "text.secondary",
-                          mt: 1,
-                        }}
-                      >
-                        {item.caption}
-                      </Typography>
+                      {(item.caption || item.description) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: "block",
+                            textAlign: "center",
+                            fontStyle: "italic",
+                            color: "text.secondary",
+                            mt: 1,
+                          }}
+                        >
+                          {item.caption || item.description}
+                        </Typography>
+                      )}
                     </Box>
                   )}
-                  {item.type === "video" && (
+                  {(item.type === "video" ||
+                    item.mimeType?.startsWith("video/")) && (
                     <Box>
                       <video
                         controls
@@ -156,23 +268,29 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
                           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
                         }}
                       >
-                        <source src={item.url} type="video/mp4" />
+                        <source
+                          src={item.url || item.fileUrl}
+                          type={item.mimeType || "video/mp4"}
+                        />
                       </video>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: "block",
-                          textAlign: "center",
-                          fontStyle: "italic",
-                          color: "text.secondary",
-                          mt: 1,
-                        }}
-                      >
-                        {item.caption}
-                      </Typography>
+                      {(item.caption || item.description) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: "block",
+                            textAlign: "center",
+                            fontStyle: "italic",
+                            color: "text.secondary",
+                            mt: 1,
+                          }}
+                        >
+                          {item.caption || item.description}
+                        </Typography>
+                      )}
                     </Box>
                   )}
-                  {item.type === "audio" && (
+                  {(item.type === "audio" ||
+                    item.mimeType?.startsWith("audio/")) && (
                     <Box
                       sx={{
                         p: 3,
@@ -181,20 +299,25 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
                       }}
                     >
                       <audio controls style={{ width: "100%" }}>
-                        <source src={item.url} type="audio/mpeg" />
+                        <source
+                          src={item.url || item.fileUrl}
+                          type={item.mimeType || "audio/mpeg"}
+                        />
                       </audio>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          display: "block",
-                          textAlign: "center",
-                          fontStyle: "italic",
-                          color: "text.secondary",
-                          mt: 2,
-                        }}
-                      >
-                        {item.caption}
-                      </Typography>
+                      {(item.caption || item.description) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: "block",
+                            textAlign: "center",
+                            fontStyle: "italic",
+                            color: "text.secondary",
+                            mt: 2,
+                          }}
+                        >
+                          {item.caption || item.description}
+                        </Typography>
+                      )}
                     </Box>
                   )}
                 </Box>
@@ -205,38 +328,40 @@ Our first dance was to "Unforgettable" by Nat King Cole. John held me close and 
           <Divider sx={{ my: 4 }} />
 
           {/* Tags Section */}
-          <Box>
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <Label sx={{ color: "primary.main" }} />
-              Related Tags
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-              {story.tags.map((tag) => (
-                <Chip
-                  key={tag}
-                  label={tag}
-                  clickable
-                  sx={{
-                    backgroundColor: "primary.light",
-                    color: "white",
-                    fontWeight: 500,
-                    "&:hover": {
-                      backgroundColor: "primary.main",
-                    },
-                  }}
-                />
-              ))}
-            </Stack>
-          </Box>
+          {story.tags && story.tags.length > 0 && (
+            <Box>
+              <Typography
+                variant="h6"
+                sx={{
+                  mb: 2,
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Label sx={{ color: "primary.main" }} />
+                Related Tags
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+                {story.tags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    clickable
+                    sx={{
+                      backgroundColor: "primary.light",
+                      color: "white",
+                      fontWeight: 500,
+                      "&:hover": {
+                        backgroundColor: "primary.main",
+                      },
+                    }}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
         </Paper>
       </Container>
     </Box>
