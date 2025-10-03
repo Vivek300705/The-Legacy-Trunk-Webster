@@ -24,8 +24,11 @@ import api from "../api/axiosConfig";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
-  const [userData, setUserData] = useState(null);
+
+  // FIXED: Use mongoUser instead of user
+  const mongoUser = useSelector((state) => state.auth.mongoUser);
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
+
   const [recentStories, setRecentStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,12 +36,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch user profile with populated family circle
-        const profileResponse = await api.get("/user/profile");
-        setUserData(profileResponse.data);
-
         // Fetch recent stories if user has a family circle
-        if (profileResponse.data.familyCircle) {
+        if (mongoUser?.familyCircle) {
           try {
             const storiesResponse = await api.get(
               "/stories/family-circle?limit=3"
@@ -57,13 +56,15 @@ const Dashboard = () => {
       }
     };
 
-    if (user) {
+    if (mongoUser) {
       fetchDashboardData();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [mongoUser]);
 
-  const isNewUser = !userData?.familyCircle;
-  const familyCircle = userData?.familyCircle;
+  const isNewUser = !mongoUser?.familyCircle;
+  const familyCircle = mongoUser?.familyCircle;
 
   const quickActions = [
     {
@@ -108,7 +109,7 @@ const Dashboard = () => {
 
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" sx={{ mb: 1, fontWeight: 700 }}>
-          Welcome back, {userData?.name || "Friend"}!
+          Welcome back, {mongoUser?.name || "Friend"}!
         </Typography>
         <Typography variant="h6" color="text.secondary">
           Continue building your family legacy
@@ -188,7 +189,7 @@ const Dashboard = () => {
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
             Your Family Circle
           </Typography>
-          {!isNewUser && (
+          {!isNewUser && familyCircle?._id && (
             <Button
               variant="outlined"
               startIcon={<Group />}
@@ -239,7 +240,10 @@ const Dashboard = () => {
                 boxShadow: 4,
               },
             }}
-            onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
+            onClick={() =>
+              familyCircle?._id &&
+              navigate(`/family-circle/${familyCircle._id}`)
+            }
           >
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
@@ -254,14 +258,14 @@ const Dashboard = () => {
                 </Box>
                 {familyCircle?.member && familyCircle.member.length > 0 && (
                   <AvatarGroup max={4}>
-                    {familyCircle.member.map((member) => (
+                    {familyCircle.member.map((memberItem) => (
                       <Avatar
-                        key={member._id}
-                        alt={member.name}
-                        src={member.profilePictur}
+                        key={memberItem._id}
+                        alt={memberItem.name}
+                        src={memberItem.profilePicture}
                         sx={{ width: 32, height: 32 }}
                       >
-                        {member.name?.charAt(0)}
+                        {memberItem.name?.charAt(0)}
                       </Avatar>
                     ))}
                   </AvatarGroup>
@@ -322,7 +326,7 @@ const Dashboard = () => {
                 <CardContent>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     <Avatar
-                      src={story.author?.profilePictur}
+                      src={story.author?.profilePicture}
                       sx={{ width: 32, height: 32, mr: 1 }}
                     >
                       {story.author?.name?.charAt(0)}

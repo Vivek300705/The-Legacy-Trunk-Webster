@@ -30,7 +30,8 @@ import api from "../api/axiosConfig";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
+  const mongoUser = useSelector((state) => state.auth.mongoUser);
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ const Profile = () => {
         const relationshipsResponse = await api.get("/relationships/approved");
         setRelationships(relationshipsResponse.data);
 
-       const storiesResponse = await api.get("/stories/user?limit=4");
+        const storiesResponse = await api.get("/stories/user?limit=4");
         setRecentStories(storiesResponse.data.stories || []);
       } catch (err) {
         console.error("Error fetching profile data:", err);
@@ -79,8 +80,8 @@ const Profile = () => {
       }
     };
 
-    if (user) fetchProfileData();
-  }, [user]);
+    if (mongoUser) fetchProfileData();
+  }, [mongoUser]);
 
   const handleSaveProfile = async () => {
     try {

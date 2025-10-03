@@ -18,7 +18,10 @@ import {
 
 const Landing = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+
+  // FIXED: Use firebaseUser to check if logged in
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
+  const mongoUser = useSelector((state) => state.auth.mongoUser);
 
   const features = [
     {
@@ -99,8 +102,8 @@ const Landing = () => {
                 lasting legacy for generations to treasure.
               </Typography>
 
-              {/* Only show buttons if user is NOT logged in */}
-              {!user && (
+              {/* Show buttons only if user is NOT logged in */}
+              {!firebaseUser && (
                 <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                   <Button
                     variant="contained"
@@ -141,7 +144,7 @@ const Landing = () => {
               )}
 
               {/* Show welcome message if user IS logged in */}
-              {user && (
+              {firebaseUser && (
                 <Typography
                   variant="h5"
                   sx={{
@@ -155,7 +158,8 @@ const Landing = () => {
                     display: "inline-block",
                   }}
                 >
-                  Welcome back, {user.email?.split("@")[0]}! 👋
+                  Welcome back,{" "}
+                  {mongoUser?.name || firebaseUser.email?.split("@")[0]}!
                 </Typography>
               )}
             </Box>
@@ -242,7 +246,7 @@ const Landing = () => {
       </Container>
 
       {/* CTA Section - Only show if user is NOT logged in */}
-      {!user && (
+      {!firebaseUser && (
         <Box
           sx={{
             backgroundColor: "primary.main",

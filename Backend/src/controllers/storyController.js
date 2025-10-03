@@ -1,10 +1,10 @@
 import Story from "../models/Story.model.js";
-import Media from "../models/Media.model.js"; // For cascading delete
+import Media from "../models/Media.model.js";
 
 // =================== CREATE STORY ===================
 export const createStory = async (req, res) => {
   try {
-    const { title, content, eventDate } = req.body;
+    const { title, content, eventDate, tags } = req.body;
     const userId = req.user._id;
     const userFamilyCircle = req.user.familyCircle;
 
@@ -20,6 +20,7 @@ export const createStory = async (req, res) => {
       author: userId,
       familyCircle: userFamilyCircle,
       eventDate: eventDate || new Date(),
+      tags: tags || [],
     });
 
     const populatedStory = await Story.findById(newStory._id)
@@ -48,12 +49,23 @@ export const getUserStories = async (req, res) => {
       .limit(parseInt(limit))
       .skip(parseInt(skip));
 
+    // Fetch media for each story
+    const storiesWithMedia = await Promise.all(
+      stories.map(async (story) => {
+        const media = await Media.find({ associatedStory: story._id });
+        return {
+          ...story.toObject(),
+          media,
+        };
+      })
+    );
+
     const totalStories = await Story.countDocuments({ author: userId });
 
     res.status(200).json({
-      stories,
+      stories: storiesWithMedia,
       total: totalStories,
-      hasMore: skip + stories.length < totalStories,
+      hasMore: parseInt(skip) + stories.length < totalStories,
     });
   } catch (error) {
     console.error("Error fetching user stories:", error);
@@ -62,15 +74,28 @@ export const getUserStories = async (req, res) => {
       .json({ message: "Error fetching stories", error: error.message });
   }
 };
+
+// =================== GET STORIES FOR FAMILY ===================
 export const getStoriesForFamily = async (req, res) => {
   try {
     const { familyId } = req.params;
 
-    const stories = await Story.find({ family: familyId })
+    const stories = await Story.find({ familyCircle: familyId })
       .populate("author", "name profilePicture")
       .sort({ createdAt: -1 });
 
-    res.status(200).json(stories);
+    // Fetch media for each story
+    const storiesWithMedia = await Promise.all(
+      stories.map(async (story) => {
+        const media = await Media.find({ associatedStory: story._id });
+        return {
+          ...story.toObject(),
+          media,
+        };
+      })
+    );
+
+    res.status(200).json(storiesWithMedia);
   } catch (error) {
     res.status(500).json({ message: "Error fetching stories", error });
   }
@@ -79,9 +104,9 @@ export const getStoriesForFamily = async (req, res) => {
 // =================== GET STORY BY ID ===================
 export const getStoryById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { storyId } = req.params;
 
-    const story = await Story.findById(id)
+    const story = await Story.findById(storyId)
       .populate("author", "name email profilePicture")
       .populate("familyCircle", "name members");
 
@@ -99,7 +124,18 @@ export const getStoryById = async (req, res) => {
         .json({ message: "You don't have access to this story" });
     }
 
-    res.status(200).json(story);
+    // Fetch associated media
+    const media = await Media.find({ associatedStory: storyId }).populate(
+      "uploader",
+      "name profilePicture"
+    );
+
+    const storyWithMedia = {
+      ...story.toObject(),
+      media,
+    };
+
+    res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error fetching story:", error);
     res
@@ -127,14 +163,25 @@ export const getFamilyCircleStories = async (req, res) => {
       .limit(parseInt(limit))
       .skip(parseInt(skip));
 
+    // Fetch media for each story
+    const storiesWithMedia = await Promise.all(
+      stories.map(async (story) => {
+        const media = await Media.find({ associatedStory: story._id });
+        return {
+          ...story.toObject(),
+          media,
+        };
+      })
+    );
+
     const totalStories = await Story.countDocuments({
       familyCircle: userFamilyCircle,
     });
 
     res.status(200).json({
-      stories,
+      stories: storiesWithMedia,
       total: totalStories,
-      hasMore: skip + stories.length < totalStories,
+      hasMore: parseInt(skip) + stories.length < totalStories,
     });
   } catch (error) {
     console.error("Error fetching family circle stories:", error);
@@ -149,7 +196,7 @@ export const getFamilyCircleStories = async (req, res) => {
 export const updateStory = async (req, res) => {
   try {
     const { storyId } = req.params;
-    const { title, content, eventDate } = req.body;
+    const { title, content, eventDate, tags } = req.body;
     const user = req.user;
 
     const story = await Story.findById(storyId);
@@ -164,13 +211,28 @@ export const updateStory = async (req, res) => {
         .json({ message: "You are not authorized to edit this story." });
     }
 
-    const updatedStory = await Story.findByIdAndUpdate(
-      storyId,
-      { title, content, eventDate },
-      { new: true, runValidators: true }
-    );
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (eventDate !== undefined) updateData.eventDate = eventDate;
+    if (tags !== undefined) updateData.tags = tags;
 
-    res.status(200).json(updatedStory);
+    const updatedStory = await Story.findByIdAndUpdate(storyId, updateData, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("author", "name email profilePicture")
+      .populate("familyCircle", "name");
+
+    // Fetch associated media
+    const media = await Media.find({ associatedStory: storyId });
+
+    const storyWithMedia = {
+      ...updatedStory.toObject(),
+      media,
+    };
+
+    res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error updating story:", error);
     res
@@ -197,14 +259,19 @@ export const deleteStory = async (req, res) => {
         .json({ message: "You are not authorized to delete this story." });
     }
 
+    // First, get all media to delete from Cloudinary if needed
+    const mediaFiles = await Media.find({ associatedStory: storyId });
+
+    // Delete story
     await Story.findByIdAndDelete(storyId);
 
     // Cascade delete any media linked to this story
     await Media.deleteMany({ associatedStory: storyId });
 
-    res
-      .status(200)
-      .json({ message: "Story and associated media deleted successfully." });
+    res.status(200).json({
+      message: "Story and associated media deleted successfully.",
+      deletedMediaCount: mediaFiles.length,
+    });
   } catch (error) {
     console.error("Error deleting story:", error);
     res

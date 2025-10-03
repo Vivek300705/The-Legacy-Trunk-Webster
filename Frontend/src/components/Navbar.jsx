@@ -14,7 +14,9 @@ import { AutoStories } from "@mui/icons-material";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+
+  // FIXED: Use firebaseUser instead of user
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
 
   const handleLogout = async () => {
     try {
@@ -58,7 +60,7 @@ const Navbar = () => {
           </Box>
 
           <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-            {user ? (
+            {firebaseUser ? (
               <>
                 <Button color="inherit" onClick={() => navigate("/dashboard")}>
                   Dashboard

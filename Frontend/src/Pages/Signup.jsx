@@ -11,15 +11,18 @@ import {
 } from "@mui/material";
 import { Google } from "@mui/icons-material";
 import { useNavigate, Link, Navigate } from "react-router-dom";
-// Import the necessary context hook and Firebase auth functions
-import { useAuth } from "../context/authContext/index"; // Assuming this is your hook
+import { useSelector } from "react-redux";
+import { useAuth } from "../context/authContext/index";
 import {
   doCreateUserWithEmailAndPassword,
   doSignInWithGoogle,
 } from "../Firebase/auth";
 
 const Signup = () => {
-  const { userLoggedIn } = useAuth();
+  // FIXED: Use Redux state instead of just context
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
+  const { userLoggedIn } = useAuth(); // Keep for compatibility
+
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,10 +34,9 @@ const Signup = () => {
     e.preventDefault();
     setError("");
 
-    // Prevent multiple submissions
     if (loading) return;
 
-    // --- Validation ---
+    // Validation
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -47,6 +49,8 @@ const Signup = () => {
     setLoading(true);
     try {
       await doCreateUserWithEmailAndPassword(email, password);
+      // User data will be automatically synced by App.jsx onAuthStateChanged
+    } catch (err) {
       console.error(err);
       if (err.code === "auth/email-already-in-use") {
         setError("This email address is already in use.");
@@ -66,7 +70,7 @@ const Signup = () => {
     setError("");
     try {
       await doSignInWithGoogle();
-      // Successful sign-in will trigger redirect
+      // User data will be automatically synced by App.jsx onAuthStateChanged
     } catch (err) {
       console.error(err);
       setError("Google sign-in failed. Please try again.");
@@ -75,9 +79,13 @@ const Signup = () => {
     }
   };
 
+  // FIXED: Check both for compatibility
+  if (firebaseUser || userLoggedIn) {
+    return <Navigate to="/dashboard" replace={true} />;
+  }
+
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      {userLoggedIn && <Navigate to={"/"} replace={true} />}
       <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
         <Typography
           variant="h4"
@@ -101,7 +109,6 @@ const Signup = () => {
           </Alert>
         )}
 
-        {/* The form's onSubmit was corrected */}
         <Box component="form" onSubmit={onSignUp}>
           <TextField
             fullWidth
@@ -153,7 +160,7 @@ const Signup = () => {
           variant="outlined"
           size="large"
           startIcon={<Google />}
-          onClick={onGoogleSignIn} // Corrected casing
+          onClick={onGoogleSignIn}
           disabled={loading}
           sx={{ mb: 2 }}
         >

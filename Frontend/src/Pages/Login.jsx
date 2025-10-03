@@ -6,6 +6,7 @@ import {
   doPasswordReset,
 } from "../Firebase/auth";
 import { Link, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Container,
   Paper,
@@ -22,7 +23,10 @@ import {
 import { Google } from "@mui/icons-material";
 
 const Login = () => {
-  const { userLoggedIn } = useAuth();
+  // FIXED: Use Redux state instead of context
+  const firebaseUser = useSelector((state) => state.auth.firebaseUser);
+  const { userLoggedIn } = useAuth(); // Keep for compatibility if needed
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSigningIn, setSigningIn] = useState(false);
@@ -43,6 +47,7 @@ const Login = () => {
     setErrorMessage("");
     try {
       await doSignInWithEmailAndPassword(email, password);
+      // User data will be automatically synced by App.jsx onAuthStateChanged
     } catch (err) {
       console.error(err);
       if (
@@ -70,6 +75,7 @@ const Login = () => {
     setErrorMessage("");
     try {
       await doSignInWithGoogle();
+      // User data will be automatically synced by App.jsx onAuthStateChanged
     } catch (err) {
       console.error(err);
       setErrorMessage("Google sign-in failed. Please try again.");
@@ -80,7 +86,7 @@ const Login = () => {
 
   const handleForgotPasswordOpen = () => {
     setForgotPasswordOpen(true);
-    setResetEmail(email); // Pre-fill with current email if available
+    setResetEmail(email);
     setResetSuccess(false);
     setResetError("");
   };
@@ -109,7 +115,6 @@ const Login = () => {
       await doPasswordReset(resetEmail);
       setResetSuccess(true);
       setResetError("");
-      // Auto-close dialog after 3 seconds on success
       setTimeout(() => {
         handleForgotPasswordClose();
       }, 3000);
@@ -130,10 +135,13 @@ const Login = () => {
     }
   };
 
+  // FIXED: Check both for compatibility
+  if (firebaseUser || userLoggedIn) {
+    return <Navigate to="/dashboard" replace={true} />;
+  }
+
   return (
     <Container maxWidth="sm" sx={{ py: 6 }}>
-      {userLoggedIn && <Navigate to={"/"} replace={true} />}
-
       <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
         <Typography variant="h5" align="center" sx={{ fontWeight: 600, mb: 2 }}>
           Login
@@ -167,7 +175,6 @@ const Login = () => {
             autoComplete="current-password"
           />
 
-          {/* Forgot Password Link */}
           <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
             <Button
               size="small"

@@ -8,8 +8,9 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ["auth/setUser"],
-        ignoredPaths: ["auth.user"],
+        // Ignore Firebase user objects and MongoDB user objects in Redux
+        ignoredActions: ["auth/setFirebaseUser", "auth/setMongoUser"],
+        ignoredPaths: ["auth.firebaseUser", "auth.mongoUser"],
       },
     }),
 });

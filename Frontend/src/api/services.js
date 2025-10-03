@@ -53,13 +53,49 @@ export const getFamilyMembers = async (circleId) => {
   return response.data;
 };
 
+export const updateCircleName = async (circleId, name) => {
+  const response = await api.put(`/family-circles/${circleId}/name`, { name });
+  return response.data;
+};
+
 export const inviteMember = async (circleId, email) => {
-  const response = await api.post(`/family-circles/${circleId}/invite`, { email });
+  const response = await api.post(`/family-circles/${circleId}/invite`, {
+    email,
+  });
   return response.data;
 };
 
 export const removeMember = async (circleId, memberId) => {
-  const response = await api.delete(`/family-circles/${circleId}/members/${memberId}`);
+  const response = await api.delete(
+    `/family-circles/${circleId}/members/${memberId}`
+  );
+  return response.data;
+};
+
+export const getCircleInvitations = async (circleId) => {
+  const response = await api.get(`/family-circles/${circleId}/invitations`);
+  return response.data;
+};
+
+export const acceptInvitation = async (token) => {
+  const response = await api.post(`/family-circles/accept-invite/${token}`);
+  return response.data;
+};
+
+export const cancelInvitation = async (invitationId) => {
+  const response = await api.delete(
+    `/family-circles/invitations/${invitationId}`
+  );
+  return response.data;
+};
+
+export const leaveFamilyCircle = async (circleId) => {
+  const response = await api.post(`/family-circles/${circleId}/leave`);
+  return response.data;
+};
+
+export const deleteFamilyCircle = async (circleId) => {
+  const response = await api.delete(`/family-circles/${circleId}`);
   return response.data;
 };
 
@@ -69,7 +105,6 @@ export const sendRelationshipRequest = async (
   relationshipType
 ) => {
   const response = await api.post("/relationships/request", {
-    // keep `/request` style from first file
     recipientId,
     relationshipType,
   });
@@ -83,7 +118,6 @@ export const getPendingRequests = async () => {
 
 export const respondToRequest = async (requestId, response) => {
   const res = await api.put(`/relationships/respond/${requestId}`, {
-    // keep `/respond/` style from first file
     response,
   });
   return res.data;
@@ -100,9 +134,9 @@ export const createStory = async (storyData) => {
   return response.data;
 };
 
-// from first file naming
-export const getStoriesForFamily = async () => {
-  const response = await api.get("/stories");
+// ✅ FIXED: Now accepts familyId parameter to match the route
+export const getStoriesForFamily = async (familyId) => {
+  const response = await api.get(`/stories/family/${familyId}`);
   return response.data;
 };
 
@@ -121,12 +155,13 @@ export const getStoryById = async (storyId) => {
   return response.data;
 };
 
-// also expose user/family-specific story fetch
+// ✅ Matches route: GET /stories/user
 export const getUserOwnStories = async (limit = 10, skip = 0) => {
   const response = await api.get(`/stories/user?limit=${limit}&skip=${skip}`);
   return response.data;
 };
 
+// ✅ Matches route: GET /stories/family-circle
 export const getFamilyCircleStories = async (limit = 20, skip = 0) => {
   const response = await api.get(
     `/stories/family-circle?limit=${limit}&skip=${skip}`

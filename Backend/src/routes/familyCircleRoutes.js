@@ -5,27 +5,52 @@ import {
   getFamilyMembers,
   inviteMember,
   removeMember,
+  acceptInvitation,
+  getCircleInvitations,
+  leaveFamilyCircle,
+  deleteFamilyCircle,
+  updateCircleName,
+  cancelInvitation,
 } from "../controllers/familyCircleController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// All routes require authentication
 router.use(authMiddleware);
 
-// Create a new family circle
+// IMPORTANT: Put specific routes BEFORE parameterized routes
+
+// Create family circle
 router.post("/", createFamilyCircle);
 
-// Get specific family circle details
+// Accept invitation (specific route before /:circleId)
+router.post("/accept-invite/:token", acceptInvitation);
+
+// Cancel invitation (specific route before /:circleId)
+router.delete("/invitations/:invitationId", cancelInvitation);
+
+// Get family circle
 router.get("/:circleId", getFamilyCircle);
 
-// Get members of a specific family circle
+// Update circle name (Admin only)
+router.put("/:circleId/name", updateCircleName);
+
+// Get members
 router.get("/:circleId/members", getFamilyMembers);
 
-// Invite a member to family circle
+// Invite member
 router.post("/:circleId/invite", inviteMember);
 
-// Remove a member from family circle
+// Get invitations
+router.get("/:circleId/invitations", getCircleInvitations);
+
+// Leave circle
+router.post("/:circleId/leave", leaveFamilyCircle);
+
+// Remove member
 router.delete("/:circleId/members/:memberId", removeMember);
+
+// Delete circle
+router.delete("/:circleId", deleteFamilyCircle);
 
 export default router;

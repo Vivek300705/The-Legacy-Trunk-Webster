@@ -33,7 +33,7 @@ import {
 const FamilyTreeBuilder = () => {
   const { circleId } = useParams();
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+  const mongoUser = useSelector((state) => state.auth.mongoUser);
 
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedRelative, setSelectedRelative] = useState("");
@@ -233,7 +233,8 @@ const FamilyTreeBuilder = () => {
                     {familyMembers
                       .filter(
                         (m) =>
-                          m._id !== selectedPerson._id && m._id !== user._id
+                          m._id !== selectedPerson._id &&
+                          m._id !== mongoUser?._id
                       )
                       .map((member) => (
                         <MenuItem key={member._id} value={member._id}>
