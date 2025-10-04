@@ -7,12 +7,13 @@ import {
   Chip,
   Stack,
   Paper,
-  Divider,
   CircularProgress,
   Alert,
   IconButton,
   Menu,
   MenuItem,
+  Avatar,
+  Divider,
 } from "@mui/material";
 import {
   Person,
@@ -86,7 +87,7 @@ const StoryDetail = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#FFFBF5",
+          backgroundColor: "#FAFAFA",
         }}
       >
         <CircularProgress />
@@ -96,8 +97,8 @@ const StoryDetail = () => {
 
   if (error) {
     return (
-      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
-        <Container maxWidth="md">
+      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FAFAFA" }}>
+        <Container maxWidth="sm">
           <Alert severity="error">{error}</Alert>
         </Container>
       </Box>
@@ -106,195 +107,251 @@ const StoryDetail = () => {
 
   if (!story) {
     return (
-      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
-        <Container maxWidth="md">
+      <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FAFAFA" }}>
+        <Container maxWidth="sm">
           <Alert severity="info">Story not found</Alert>
         </Container>
       </Box>
     );
   }
 
+  // Separate media by type
+  const images =
+    story.media?.filter(
+      (m) =>
+        m.type === "image" ||
+        m.mimeType?.startsWith("image/") ||
+        m.mediaType === "photo"
+    ) || [];
+  const videos =
+    story.media?.filter(
+      (m) =>
+        m.type === "video" ||
+        m.mimeType?.startsWith("video/") ||
+        m.mediaType === "video"
+    ) || [];
+  const audio =
+    story.media?.filter(
+      (m) =>
+        m.type === "audio" ||
+        m.mimeType?.startsWith("audio/") ||
+        m.mediaType === "audio"
+    ) || [];
+
   return (
-    <Box sx={{ minHeight: "100vh", py: 6, backgroundColor: "#FFFBF5" }}>
-      <Container maxWidth="md">
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#FAFAFA", py: 3 }}>
+      <Container maxWidth="sm" sx={{ px: { xs: 0, sm: 2 } }}>
+        {/* Instagram-style Post Card */}
         <Paper
+          elevation={0}
           sx={{
-            p: { xs: 3, md: 6 },
-            borderRadius: 4,
+            borderRadius: { xs: 0, sm: 3 },
+            border: { xs: "none", sm: "1px solid #DBDBDB" },
             backgroundColor: "white",
-            position: "relative",
+            mb: 3,
           }}
         >
-          {/* Action Menu */}
-          <IconButton
+          {/* Post Header */}
+          <Box
             sx={{
-              position: "absolute",
-              top: 16,
-              right: 16,
-            }}
-            onClick={handleMenuOpen}
-          >
-            <MoreVert />
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem onClick={handleEdit}>
-              <Edit sx={{ mr: 1 }} fontSize="small" />
-              Edit
-            </MenuItem>
-            <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
-              <Delete sx={{ mr: 1 }} fontSize="small" />
-              Delete
-            </MenuItem>
-          </Menu>
-
-          {/* Header */}
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              mb: 3,
-              pr: 6,
-              fontWeight: 700,
-              fontFamily: "Georgia, serif",
-              color: "text.primary",
-              lineHeight: 1.2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              p: 2,
             }}
           >
-            {story.title}
-          </Typography>
-
-          {/* Metadata */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            sx={{
-              mb: 4,
-              pb: 4,
-              borderBottom: "2px solid",
-              borderColor: "divider",
-            }}
-          >
-            <Chip
-              icon={<Person />}
-              label={`By ${story.author?.name || story.author || "Anonymous"}`}
-              sx={{
-                backgroundColor: "primary.light",
-                color: "white",
-                fontWeight: 500,
-              }}
-            />
-            <Chip
-              icon={<CalendarToday />}
-              label={new Date(story.date || story.createdAt).toLocaleDateString(
-                "en-US",
-                {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                }
-              )}
-              variant="outlined"
-              sx={{ borderColor: "primary.main", color: "text.primary" }}
-            />
-          </Stack>
-
-          {/* Main Content */}
-          <Box sx={{ mb: 4 }}>
-            {story.content.split("\n\n").map((paragraph, index) => (
-              <Typography
-                key={index}
-                variant="body1"
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Avatar
                 sx={{
-                  mb: 3,
-                  fontSize: "1.1rem",
-                  lineHeight: 1.8,
-                  fontFamily: "Georgia, serif",
-                  color: "text.primary",
-                  textAlign: "justify",
+                  width: 40,
+                  height: 40,
+                  backgroundColor: "primary.main",
                 }}
               >
-                {paragraph}
-              </Typography>
-            ))}
+                {(story.author?.name || "A")[0].toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, lineHeight: 1.2 }}
+                >
+                  {story.author?.name || "Anonymous"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(story.date || story.createdAt).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton size="small" onClick={handleMenuOpen}>
+              <MoreVert />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={handleEdit}>
+                <Edit sx={{ mr: 1 }} fontSize="small" />
+                Edit
+              </MenuItem>
+              <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
+                <Delete sx={{ mr: 1 }} fontSize="small" />
+                Delete
+              </MenuItem>
+            </Menu>
           </Box>
 
-          {/* Media Gallery */}
-          {story.media && story.media.length > 0 && (
-            <Box sx={{ my: 5 }}>
-              {story.media.map((item, index) => (
-                <Box key={index} sx={{ mb: 4 }}>
-                  {(item.type === "image" ||
-                    item.mimeType?.startsWith("image/")) && (
-                    <Box>
-                      <Box
-                        component="img"
-                        src={item.url || item.fileUrl}
-                        alt={item.caption || item.description}
-                        sx={{
-                          width: "100%",
-                          borderRadius: 2,
-                          boxShadow: 3,
-                          mb: 1,
-                        }}
-                      />
-                      {(item.caption || item.description) && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            display: "block",
-                            textAlign: "center",
-                            fontStyle: "italic",
-                            color: "text.secondary",
-                            mt: 1,
-                          }}
-                        >
-                          {item.caption || item.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                  {(item.type === "video" ||
-                    item.mimeType?.startsWith("video/")) && (
-                    <Box>
-                      <video
-                        controls
-                        style={{
-                          width: "100%",
-                          borderRadius: "8px",
-                          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                        }}
-                      >
-                        <source
-                          src={item.url || item.fileUrl}
-                          type={item.mimeType || "video/mp4"}
-                        />
-                      </video>
-                      {(item.caption || item.description) && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            display: "block",
-                            textAlign: "center",
-                            fontStyle: "italic",
-                            color: "text.secondary",
-                            mt: 1,
-                          }}
-                        >
-                          {item.caption || item.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                  {(item.type === "audio" ||
-                    item.mimeType?.startsWith("audio/")) && (
+          {/* Images - Instagram Carousel Style */}
+          {images.length > 0 && (
+            <Box
+              sx={{
+                width: "100%",
+                position: "relative",
+                backgroundColor: "#000",
+              }}
+            >
+              {images.map((item, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: "100%",
+                    maxHeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={item.url || item.fileUrl}
+                    alt={item.caption || item.description}
+                    sx={{
+                      width: "100%",
+                      maxHeight: 600,
+                      objectFit: "contain",
+                    }}
+                  />
+                </Box>
+              ))}
+              {images.length > 1 && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    color: "white",
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 2,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  1/{images.length}
+                </Box>
+              )}
+            </Box>
+          )}
+
+          {/* Videos */}
+          {videos.map((item, index) => (
+            <Box key={index} sx={{ width: "100%", backgroundColor: "#000" }}>
+              <video
+                controls
+                style={{
+                  width: "100%",
+                  maxHeight: "600px",
+                  display: "block",
+                }}
+              >
+                <source
+                  src={item.url || item.fileUrl}
+                  type={item.mimeType || "video/mp4"}
+                />
+              </video>
+            </Box>
+          ))}
+
+          {/* Content Section */}
+          <Box sx={{ p: 2 }}>
+            {/* Title */}
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                mb: 1,
+                lineHeight: 1.3,
+              }}
+            >
+              {story.title}
+            </Typography>
+
+            {/* Content */}
+            <Box sx={{ mb: 2 }}>
+              {story.content.split("\n\n").map((paragraph, index) => (
+                <Typography
+                  key={index}
+                  variant="body2"
+                  sx={{
+                    mb: 1.5,
+                    lineHeight: 1.6,
+                    color: "text.primary",
+                  }}
+                >
+                  {paragraph}
+                </Typography>
+              ))}
+            </Box>
+
+            {/* Tags */}
+            {story.tags && story.tags.length > 0 && (
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                gap={0.5}
+                sx={{ mb: 2 }}
+              >
+                {story.tags.map((tag) => (
+                  <Typography
+                    key={tag}
+                    variant="caption"
+                    sx={{
+                      color: "primary.main",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      "&:hover": {
+                        textDecoration: "underline",
+                      },
+                    }}
+                  >
+                    #{tag}
+                  </Typography>
+                ))}
+              </Stack>
+            )}
+
+            {/* Audio Files */}
+            {audio.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                  Audio Recordings
+                </Typography>
+                <Stack spacing={2}>
+                  {audio.map((item, index) => (
                     <Box
+                      key={index}
                       sx={{
-                        p: 3,
-                        backgroundColor: "background.default",
+                        p: 2,
+                        backgroundColor: "#F5F5F5",
                         borderRadius: 2,
                       }}
                     >
@@ -312,57 +369,73 @@ const StoryDetail = () => {
                             textAlign: "center",
                             fontStyle: "italic",
                             color: "text.secondary",
-                            mt: 2,
+                            mt: 1,
                           }}
                         >
                           {item.caption || item.description}
                         </Typography>
                       )}
                     </Box>
-                  )}
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </Box>
+        </Paper>
+
+        {/* Additional Images (if more than 1) */}
+        {images.length > 1 && (
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: { xs: 0, sm: 3 },
+              border: { xs: "none", sm: "1px solid #DBDBDB" },
+              backgroundColor: "white",
+              p: 2,
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+              All Photos ({images.length})
+            </Typography>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 1,
+              }}
+            >
+              {images.map((item, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    position: "relative",
+                    paddingTop: "100%",
+                    overflow: "hidden",
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    "&:hover": {
+                      opacity: 0.8,
+                    },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={item.url || item.fileUrl}
+                    alt={item.caption || `Image ${index + 1}`}
+                    sx={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
                 </Box>
               ))}
             </Box>
-          )}
-
-          <Divider sx={{ my: 4 }} />
-
-          {/* Tags Section */}
-          {story.tags && story.tags.length > 0 && (
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  mb: 2,
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                }}
-              >
-                <Label sx={{ color: "primary.main" }} />
-                Related Tags
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                {story.tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    clickable
-                    sx={{
-                      backgroundColor: "primary.light",
-                      color: "white",
-                      fontWeight: 500,
-                      "&:hover": {
-                        backgroundColor: "primary.main",
-                      },
-                    }}
-                  />
-                ))}
-              </Stack>
-            </Box>
-          )}
-        </Paper>
+          </Paper>
+        )}
       </Container>
     </Box>
   );
