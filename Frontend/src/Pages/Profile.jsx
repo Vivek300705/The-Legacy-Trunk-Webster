@@ -11,11 +11,7 @@ import {
   Grid,
   Card,
   CardContent,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
+  Stack,
 } from "@mui/material";
 import {
   Edit,
@@ -23,9 +19,11 @@ import {
   Cancel,
   FamilyRestroom,
   AutoStories,
+  ArrowForward,
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { getUserOwnStories } from "../api/services";
 import api from "../api/axiosConfig";
 
 const Profile = () => {
@@ -70,8 +68,8 @@ const Profile = () => {
         const relationshipsResponse = await api.get("/relationships/approved");
         setRelationships(relationshipsResponse.data);
 
-        const storiesResponse = await api.get("/stories/user?limit=4");
-        setRecentStories(storiesResponse.data.stories || []);
+        const stories = await getUserOwnStories(6, 0);
+        setRecentStories(stories.stories || []);
       } catch (err) {
         console.error("Error fetching profile data:", err);
         setError("Failed to load profile data");
@@ -109,312 +107,457 @@ const Profile = () => {
     setError("");
   };
 
-  const handlePersonClick = (personId) => navigate(`/profile/${personId}`);
-  const handleStoryClick = (storyId) => navigate(`/story-detail?id=${storyId}`);
-
-  const renderRelationshipSection = (title, people) => {
-    if (!people || people.length === 0) return null;
-
-    return (
-      <Box>
-        <Typography
-          variant="subtitle2"
-          sx={{ mb: 1.5, fontWeight: 600, color: "text.secondary" }}
-        >
-          {title}
-        </Typography>
-        <List sx={{ p: 0 }}>
-          {people.map((person) => (
-            <ListItem
-              key={person.id}
-              button
-              onClick={() => handlePersonClick(person.id)}
-              sx={{
-                borderRadius: 1,
-                mb: 0.5,
-                px: 1.5,
-                py: 1,
-                "&:hover": { bgcolor: "action.hover" },
-              }}
-            >
-              <ListItemAvatar sx={{ minWidth: 40 }}>
-                <Avatar
-                  sx={{
-                    bgcolor: "primary.main",
-                    width: 32,
-                    height: 32,
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {person.name.charAt(0)}
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={person.name}
-                primaryTypographyProps={{ variant: "body2" }}
-              />
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-    );
-  };
+  const handleStoryClick = (storyId) => navigate(`/story-detail/${storyId}`);
 
   if (loading) return <Typography sx={{ p: 4 }}>Loading...</Typography>;
 
   return (
-    <Container
-      maxWidth="xl"
-      sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}
-    >
-      <Grid container spacing={4}>
-        {/* Left Column */}
-        <Grid item xs={12} lg={4}>
-          <Paper
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#FAFAFA", py: 4 }}>
+      <Container maxWidth="lg">
+        {/* Top Section - Profile Card */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            mb: 3,
+            borderRadius: 3,
+            border: "1px solid #E0E0E0",
+          }}
+        >
+          <Grid container spacing={4}>
+            {/* Left - Avatar and Basic Info */}
+            <Grid item xs={12} md={4}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: 150,
+                    height: 150,
+                    mb: 2,
+                    bgcolor: "primary.main",
+                    fontSize: "4rem",
+                    boxShadow: 3,
+                  }}
+                >
+                  {displayName?.charAt(0) || "U"}
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {displayName}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  {mongoUser?.email}
+                </Typography>
+                {role && (
+                  <Chip
+                    label={role}
+                    color="primary"
+                    sx={{ fontWeight: 500, px: 2 }}
+                  />
+                )}
+              </Box>
+            </Grid>
+
+            {/* Right - Edit Form */}
+            <Grid item xs={12} md={8}>
+              <Box
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+                  Profile Information
+                </Typography>
+
+                <Grid container spacing={2} sx={{ flex: 1 }}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Display Name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      disabled={!isEditing}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Role / Title"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      disabled={!isEditing}
+                      placeholder="e.g., Father, Grandmother"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "flex-end",
+                        mt: 2,
+                      }}
+                    >
+                      {!isEditing ? (
+                        <Button
+                          variant="contained"
+                          startIcon={<Edit />}
+                          onClick={() => setIsEditing(true)}
+                          size="large"
+                        >
+                          Edit Profile
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            variant="outlined"
+                            startIcon={<Cancel />}
+                            onClick={handleCancelEdit}
+                            size="large"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="contained"
+                            startIcon={<Save />}
+                            onClick={handleSaveProfile}
+                            size="large"
+                          >
+                            Save Changes
+                          </Button>
+                        </>
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        {/* Family Connections */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            border: "1px solid #E0E0E0",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+            <FamilyRestroom
+              sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
+            />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Family Connections
+            </Typography>
+          </Box>
+
+          {!relationships.parents?.length &&
+          !relationships.spouse?.length &&
+          !relationships.siblings?.length ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ textAlign: "center", py: 4 }}
+            >
+              No family connections yet. Start building your family tree!
+            </Typography>
+          ) : (
+            <Grid container spacing={3}>
+              {relationships.parents?.length > 0 && (
+                <Grid item xs={12} sm={4}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 1.5, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    Parents ({relationships.parents.length})
+                  </Typography>
+                  <Stack spacing={1}>
+                    {relationships.parents.map((person) => (
+                      <Box
+                        key={person._id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: "1px solid #E0E0E0",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            backgroundColor: "#F5F5F5",
+                            transform: "translateX(4px)",
+                          },
+                        }}
+                      >
+                        <Avatar
+                          sx={{
+                            bgcolor: "primary.main",
+                            width: 36,
+                            height: 36,
+                          }}
+                        >
+                          {person.name.charAt(0)}
+                        </Avatar>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {person.name}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Grid>
+              )}
+
+              {relationships.spouse?.length > 0 && (
+                <Grid item xs={12} sm={4}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 1.5, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    Spouse
+                  </Typography>
+                  <Stack spacing={1}>
+                    {relationships.spouse.map((person) => (
+                      <Box
+                        key={person._id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: "1px solid #E0E0E0",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            backgroundColor: "#F5F5F5",
+                            transform: "translateX(4px)",
+                          },
+                        }}
+                      >
+                        <Avatar
+                          sx={{
+                            bgcolor: "secondary.main",
+                            width: 36,
+                            height: 36,
+                          }}
+                        >
+                          {person.name.charAt(0)}
+                        </Avatar>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {person.name}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Grid>
+              )}
+
+              {relationships.siblings?.length > 0 && (
+                <Grid item xs={12} sm={4}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ mb: 1.5, fontWeight: 600, color: "text.secondary" }}
+                  >
+                    Siblings ({relationships.siblings.length})
+                  </Typography>
+                  <Stack spacing={1}>
+                    {relationships.siblings.map((person) => (
+                      <Box
+                        key={person._id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: "1px solid #E0E0E0",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            backgroundColor: "#F5F5F5",
+                            transform: "translateX(4px)",
+                          },
+                        }}
+                      >
+                        <Avatar
+                          sx={{ bgcolor: "info.main", width: 36, height: 36 }}
+                        >
+                          {person.name.charAt(0)}
+                        </Avatar>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {person.name}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Grid>
+              )}
+            </Grid>
+          )}
+        </Paper>
+
+        {/* Recent Stories - Horizontal Scroll */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            border: "1px solid #E0E0E0",
+          }}
+        >
+          <Box
             sx={{
-              p: { xs: 3, md: 4 },
-              height: "100%",
               display: "flex",
-              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 3,
             }}
           >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <AutoStories
+                sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
+              />
+              <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                Recent Stories
+              </Typography>
+            </Box>
+            <Button
+              endIcon={<ArrowForward />}
+              onClick={() => navigate("/timeline")}
+              sx={{ textTransform: "none" }}
+            >
+              View All
+            </Button>
+          </Box>
+
+          {recentStories.length > 0 ? (
             <Box
               sx={{
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                mb: 4,
+                gap: 2,
+                overflowX: "auto",
+                pb: 2,
+                "&::-webkit-scrollbar": {
+                  height: 8,
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "#F5F5F5",
+                  borderRadius: 4,
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "#BDBDBD",
+                  borderRadius: 4,
+                  "&:hover": {
+                    backgroundColor: "#9E9E9E",
+                  },
+                },
               }}
             >
-              <Avatar
-                sx={{
-                  width: { xs: 120, md: 150 },
-                  height: { xs: 120, md: 150 },
-                  mb: 2,
-                  bgcolor: "primary.main",
-                  fontSize: { xs: "3rem", md: "4rem" },
-                }}
-              >
-                {displayName?.charAt(0) || "U"}
-              </Avatar>
-              <Typography
-                variant="h4"
-                sx={{ fontWeight: 700, mb: 0.5, textAlign: "center" }}
-              >
-                {displayName}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 2, textAlign: "center" }}
-              >
-                {user?.email}
-              </Typography>
-              <Chip label={role} color="primary" />
-            </Box>
-
-            <Divider sx={{ mb: 3 }} />
-
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="Display Name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                disabled={!isEditing}
-                size="small"
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                disabled={!isEditing}
-                size="small"
-                sx={{ mb: 3 }}
-              />
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                {!isEditing ? (
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<Edit />}
-                    onClick={() => setIsEditing(true)}
-                  >
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<Save />}
-                      onClick={handleSaveProfile}
-                    >
-                      Save Changes
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<Cancel />}
-                      onClick={handleCancelEdit}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Right Column */}
-        <Grid item xs={12} lg={8}>
-          <Grid container spacing={3}>
-            {/* Family Connections */}
-            <Grid item xs={12}>
-              <Card>
-                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                    <FamilyRestroom
-                      sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
+              {recentStories.map((story) => (
+                <Card
+                  key={story._id}
+                  onClick={() => handleStoryClick(story._id)}
+                  sx={{
+                    minWidth: 280,
+                    maxWidth: 280,
+                    cursor: "pointer",
+                    transition: "all 0.3s",
+                    border: "1px solid #E0E0E0",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: 3,
+                    },
+                  }}
+                >
+                  {story.media && story.media.length > 0 && (
+                    <Box
+                      component="img"
+                      src={story.media[0].fileUrl || story.media[0].url}
+                      alt={story.title}
+                      sx={{
+                        width: "100%",
+                        height: 160,
+                        objectFit: "cover",
+                      }}
                     />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Family Connections
+                  )}
+                  <CardContent>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        mb: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {story.title}
                     </Typography>
-                  </Box>
-
-                  <Grid container spacing={2}>
-                    {relationships.parents?.length > 0 && (
-                      <Grid item xs={12} sm={6} md={4}>
-                        {renderRelationshipSection(
-                          "Parents",
-                          relationships.parents
-                        )}
-                      </Grid>
-                    )}
-                    {relationships.spouse?.length > 0 && (
-                      <Grid item xs={12} sm={6} md={4}>
-                        {renderRelationshipSection(
-                          "Spouse",
-                          relationships.spouse
-                        )}
-                      </Grid>
-                    )}
-                    {relationships.siblings?.length > 0 && (
-                      <Grid item xs={12} sm={6} md={4}>
-                        {renderRelationshipSection(
-                          "Siblings",
-                          relationships.siblings
-                        )}
-                      </Grid>
-                    )}
-                  </Grid>
-
-                  {!relationships.parents?.length &&
-                    !relationships.spouse?.length &&
-                    !relationships.siblings?.length && (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ textAlign: "center", py: 3 }}
-                      >
-                        No family connections yet
-                      </Typography>
-                    )}
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Recent Stories */}
-            <Grid item xs={12}>
-              <Card>
-                <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                    <AutoStories
-                      sx={{ fontSize: 28, color: "primary.main", mr: 1.5 }}
-                    />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Recent Stories
-                    </Typography>
-                  </Box>
-
-                  {recentStories.length > 0 ? (
-                    <>
-                      <List sx={{ p: 0 }}>
-                        {recentStories.map((story, index) => (
-                          <Box key={story.id}>
-                            <ListItem
-                              button
-                              onClick={() => handleStoryClick(story.id)}
-                              sx={{
-                                borderRadius: 1,
-                                px: 2,
-                                py: 1.5,
-                                "&:hover": { bgcolor: "action.hover" },
-                              }}
-                            >
-                              <ListItemAvatar>
-                                <Avatar sx={{ bgcolor: "secondary.main" }}>
-                                  <AutoStories />
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={story.title}
-                                secondary={
-                                  <Box>
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      By {story.author}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      {new Date(
-                                        story.date
-                                      ).toLocaleDateString()}
-                                    </Typography>
-                                  </Box>
-                                }
-                              />
-                            </ListItem>
-                            {index < recentStories.length - 1 && (
-                              <Divider sx={{ my: 1 }} />
-                            )}
-                          </Box>
-                        ))}
-                      </List>
-
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        onClick={() => navigate("/timeline")}
-                        sx={{ mt: 3 }}
-                      >
-                        View All Stories
-                      </Button>
-                    </>
-                  ) : (
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{ textAlign: "center", py: 3 }}
+                      sx={{
+                        mb: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
                     >
-                      No stories yet
+                      {story.content}
                     </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Grid>
-    </Container>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(
+                        story.date || story.createdAt
+                      ).toLocaleDateString()}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                textAlign: "center",
+                py: 6,
+                backgroundColor: "#F5F5F5",
+                borderRadius: 2,
+              }}
+            >
+              <AutoStories sx={{ fontSize: 60, color: "#BDBDBD", mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                No stories yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Start sharing your family memories
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => navigate("/story-editor")}
+              >
+                Create Your First Story
+              </Button>
+            </Box>
+          )}
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
