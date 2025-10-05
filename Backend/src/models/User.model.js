@@ -18,7 +18,7 @@ email:{
     unique:true,
     lowercase:true
 },
-profilePictur:{
+profilePicture:{
     type:String,
     default:'default.avatar.jpg'
 },

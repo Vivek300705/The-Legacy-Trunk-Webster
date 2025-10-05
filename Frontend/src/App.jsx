@@ -28,8 +28,10 @@ import StoryDetail from "./Pages/StoryDetail";
 import SearchResults from "./Pages/SearchResults";
 import FamilyCircle from "./Pages/FamilyCircle";
 import FamilyTreeBuilder from "./Pages/FamilyTreeBuilder";
+import FamilyTree from "./Pages/FamilyTree"; // ✅ Import the new FamilyTree component
 import FamilyCircleDetail from "./Pages/FamilyCircleDetail";
 import AcceptInvitation from "./Pages/AcceptInvitation";
+import AdminDashboard from "./components/AdminDashboard";
 
 const App = () => {
   useEffect(() => {
@@ -84,9 +86,10 @@ const App = () => {
               <Route path="/timeline" element={<Timeline />} />
               <Route path="/story-editor" element={<StoryEditor />} />
 
-              {/* Fixed: Added :storyId parameter */}
+              {/* Story Detail */}
               <Route path="/story-detail/:storyId" element={<StoryDetail />} />
 
+              {/* Search */}
               <Route path="/search" element={<SearchResults />} />
 
               {/* Family Circle Routes */}
@@ -96,14 +99,28 @@ const App = () => {
                 element={<FamilyCircleDetail />}
               />
 
+              {/* Family Tree Routes */}
               <Route
                 path="/family-tree/:circleId"
                 element={<FamilyTreeBuilder />}
               />
+              {/* ✅ NEW: Family Tree Visualization Route */}
+              <Route
+                path="/family-tree-view/:circleId"
+                element={<FamilyTree />}
+              />
+
+              {/* Invitation */}
               <Route
                 path="/accept-invitation/:token"
                 element={<AcceptInvitation />}
               />
+              <Route
+                path="/admin-dashboard/:circleId"
+                element={<AdminDashboard />}
+              />
+
+              {/* 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/authContext";
 import {
   doSignInWithEmailAndPassword,
   doSignInWithGoogle,
   doPasswordReset,
 } from "../Firebase/auth";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   Container,
@@ -21,11 +21,13 @@ import {
   Box,
 } from "@mui/material";
 import { Google } from "@mui/icons-material";
+import { acceptInvitation } from "../api/services";
 
 const Login = () => {
-  // FIXED: Use Redux state instead of context
+  const navigate = useNavigate();
   const firebaseUser = useSelector((state) => state.auth.firebaseUser);
-  const { userLoggedIn } = useAuth(); // Keep for compatibility if needed
+  const mongoUser = useSelector((state) => state.auth.mongoUser);
+  const { userLoggedIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,6 +40,35 @@ const Login = () => {
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  // Check for pending invitation after login
+  useEffect(() => {
+    const checkPendingInvitation = async () => {
+      const pendingToken = localStorage.getItem("pendingInvitation");
+
+      if (pendingToken && mongoUser) {
+        try {
+          console.log("Processing pending invitation after login...");
+          const response = await acceptInvitation(pendingToken);
+
+          localStorage.removeItem("pendingInvitation");
+
+          if (response.family?._id) {
+            navigate(`/family-circle/${response.family._id}`);
+          } else {
+            navigate("/dashboard");
+          }
+        } catch (err) {
+          console.error("Error accepting pending invitation:", err);
+          localStorage.removeItem("pendingInvitation");
+          // Still navigate to dashboard even if invitation fails
+          navigate("/dashboard");
+        }
+      }
+    };
+
+    checkPendingInvitation();
+  }, [mongoUser, navigate]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -135,8 +166,11 @@ const Login = () => {
     }
   };
 
-  // FIXED: Check both for compatibility
-  if (firebaseUser || userLoggedIn) {
+  // Redirect if already logged in (but not if processing invitation)
+  if (
+    (firebaseUser || userLoggedIn) &&
+    !localStorage.getItem("pendingInvitation")
+  ) {
     return <Navigate to="/dashboard" replace={true} />;
   }
 

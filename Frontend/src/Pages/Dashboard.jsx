@@ -19,13 +19,14 @@ import {
   FamilyRestroom,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import api from "../api/axiosConfig";
+import { setMongoUser } from "../store/slice/authSlice";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  // FIXED: Use mongoUser instead of user
   const mongoUser = useSelector((state) => state.auth.mongoUser);
   const firebaseUser = useSelector((state) => state.auth.firebaseUser);
 
@@ -36,16 +37,22 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch recent stories if user has a family circle
-        if (mongoUser?.familyCircle) {
-          try {
-            const storiesResponse = await api.get(
-              "/stories/family-circle?limit=3"
-            );
-            setRecentStories(storiesResponse.data.stories || []);
-          } catch (storyErr) {
-            console.log("No stories found:", storyErr);
-            setRecentStories([]);
+        // FIXED: Always refresh user data to get latest familyCircle info
+        const userResponse = await api.get("/user/profile");
+        if (userResponse.data) {
+          dispatch(setMongoUser(userResponse.data));
+
+          // Fetch recent stories if user has a family circle
+          if (userResponse.data?.familyCircle) {
+            try {
+              const storiesResponse = await api.get(
+                "/stories/family-circle?limit=3"
+              );
+              setRecentStories(storiesResponse.data.stories || []);
+            } catch (storyErr) {
+              console.log("No stories found:", storyErr);
+              setRecentStories([]);
+            }
           }
         }
       } catch (err) {
@@ -56,12 +63,12 @@ const Dashboard = () => {
       }
     };
 
-    if (mongoUser) {
+    if (firebaseUser) {
       fetchDashboardData();
     } else {
       setLoading(false);
     }
-  }, [mongoUser]);
+  }, [firebaseUser, dispatch]);
 
   const isNewUser = !mongoUser?.familyCircle;
   const familyCircle = mongoUser?.familyCircle;

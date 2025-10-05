@@ -2,7 +2,7 @@ import Family from "../models/FamilyCircle.model.js";
 import User from "../models/User.model.js";
 import Invitation from "../models/Invitation.model.js";
 import crypto from "crypto";
-// import { sendInvitationEmail } from ".././utils/sendInvitationEmail.js";
+import { sendInvitationEmail } from ".././utils/sendInvitationEmail.js";
 
 /* ---------------------------
    Create Family Circle
@@ -627,3 +627,104 @@ export const cancelInvitation = async (req, res) => {
     });
   }
 };
+
+export const getFamilyTreeData = async (req, res) => {
+  try {
+    const { circleId } = req.params;
+    const userId = req.user._id;
+
+    const circle = await FamilyCircle.findById(circleId)
+      .populate("admin", "name email profilePicture")
+      .populate("member", "name email profilePicture");
+
+    if (!circle) {
+      return res.status(404).json({ message: "Family circle not found" });
+    }
+
+    const isMember =
+      circle.admin._id.toString() === userId.toString() ||
+      circle.member.some((m) => m._id.toString() === userId.toString());
+
+    if (!isMember) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const allMemberIds = [circle.admin._id, ...circle.member.map((m) => m._id)];
+
+    // Get only admin-approved relationships
+    const relationships = await Relationship.find({
+      status: "approved",
+      approvedByAdmin: true, // ✅ Only admin-approved
+      $or: [
+        { requester: { $in: allMemberIds } },
+        { recipient: { $in: allMemberIds } },
+      ],
+    })
+      .populate("requester", "name email profilePicture")
+      .populate("recipient", "name email profilePicture");
+
+    // Build tree structure
+    const treeData = buildFamilyTree(circle, relationships);
+
+    res.status(200).json({
+      circle: {
+        _id: circle._id,
+        name: circle.name,
+      },
+      tree: treeData,
+      members: [circle.admin, ...circle.member],
+      relationships: relationships,
+    });
+  } catch (error) {
+    console.error("Error fetching family tree:", error);
+    res.status(500).json({
+      message: "Error fetching family tree data",
+      error: error.message,
+    });
+  }
+};
+
+function buildFamilyTree(circle, relationships) {
+  const members = [circle.admin, ...circle.member];
+  const nodes = members.map((member) => ({
+    id: member._id.toString(),
+    name: member.name,
+    photo: member.profilePicture || "/default-avatar.jpg",
+    email: member.email,
+    isAdmin: member._id.toString() === circle.admin._id.toString(),
+    children: [],
+    parents: [],
+    spouse: null,
+    generation: 0,
+  }));
+
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+  relationships.forEach((rel) => {
+    const requesterId = rel.requester._id.toString();
+    const recipientId = rel.recipient._id.toString();
+    const requesterNode = nodeMap.get(requesterId);
+    const recipientNode = nodeMap.get(recipientId);
+
+    if (!requesterNode || !recipientNode) return;
+
+    const relType = rel.relationshipType;
+
+    if (relType === "Parent") {
+      requesterNode.children.push(recipientNode);
+      recipientNode.parents.push(requesterNode);
+    } else if (relType === "Child") {
+      recipientNode.children.push(requesterNode);
+      requesterNode.parents.push(recipientNode);
+    } else if (relType === "Spouse") {
+      requesterNode.spouse = recipientNode;
+      recipientNode.spouse = requesterNode;
+    } else if (relType === "Grandparent") {
+      // Indirect: handle in UI
+    }
+  });
+
+  // Find root (person with no parents)
+  const roots = nodes.filter((n) => n.parents.length === 0);
+  return roots.length > 0 ? roots[0] : nodes[0];
+}

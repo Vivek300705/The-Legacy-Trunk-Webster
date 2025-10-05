@@ -20,7 +20,13 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { AccountTree, Person, FamilyRestroom, Save } from "@mui/icons-material";
+import {
+  AccountTree,
+  Person,
+  FamilyRestroom,
+  Save,
+  Visibility,
+} from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
@@ -28,6 +34,8 @@ import {
   getPendingRequests,
   respondToRequest,
   getFamilyMembers,
+  getPendingRelationshipsForAdmin,
+  adminApproveRelationship,
 } from "../api/services";
 
 const FamilyTreeBuilder = () => {
@@ -39,8 +47,10 @@ const FamilyTreeBuilder = () => {
   const [selectedRelative, setSelectedRelative] = useState("");
   const [relationshipType, setRelationshipType] = useState("");
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingAdminApprovals, setPendingAdminApprovals] = useState([]);
   const [familyMembers, setFamilyMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -52,7 +62,7 @@ const FamilyTreeBuilder = () => {
       try {
         setLoading(true);
 
-        // Fetch pending requests
+        // Fetch pending requests for current user
         const requests = await getPendingRequests();
         setPendingRequests(requests);
 
@@ -60,6 +70,22 @@ const FamilyTreeBuilder = () => {
         if (circleId) {
           const members = await getFamilyMembers(circleId);
           setFamilyMembers(members);
+
+          // Check if user is admin
+          const userIsAdmin = members.some(
+            (m) => m._id === mongoUser?._id && m._id === members[0]?._id
+          );
+          setIsAdmin(userIsAdmin);
+
+          // Fetch pending admin approvals if user is admin
+          if (userIsAdmin) {
+            try {
+              const adminRequests = await getPendingRelationshipsForAdmin();
+              setPendingAdminApprovals(adminRequests);
+            } catch (err) {
+              console.log("Not admin or no pending approvals");
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -74,7 +100,7 @@ const FamilyTreeBuilder = () => {
     };
 
     fetchData();
-  }, [circleId]);
+  }, [circleId, mongoUser]);
 
   const handlePersonClick = (person) => {
     setSelectedPerson(person);
@@ -121,6 +147,28 @@ const FamilyTreeBuilder = () => {
     }
   };
 
+  const handleAdminApprove = async (requestId, approved) => {
+    try {
+      await adminApproveRelationship(requestId, approved);
+      setSnackbar({
+        open: true,
+        message: `Relationship ${
+          approved ? "approved" : "rejected"
+        } successfully!`,
+        severity: "success",
+      });
+      setPendingAdminApprovals((prev) =>
+        prev.filter((r) => r._id !== requestId)
+      );
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to process request",
+        severity: "error",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Container sx={{ py: 4, display: "flex", justifyContent: "center" }}>
@@ -132,11 +180,28 @@ const FamilyTreeBuilder = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          <AccountTree sx={{ fontSize: 40, color: "primary.main", mr: 2 }} />
-          <Typography variant="h3" sx={{ fontWeight: 700 }}>
-            Family Tree Builder
-          </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 2,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <AccountTree sx={{ fontSize: 40, color: "primary.main", mr: 2 }} />
+            <Typography variant="h3" sx={{ fontWeight: 700 }}>
+              Family Tree Builder
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<Visibility />}
+            onClick={() => navigate(`/family-tree-view/${circleId}`)}
+            size="large"
+          >
+            View Tree Visualization
+          </Button>
         </Box>
         <Typography variant="body1" color="text.secondary">
           Build your family tree by defining relationships between family
@@ -273,7 +338,7 @@ const FamilyTreeBuilder = () => {
                 </Button>
               </Box>
 
-              {/* Pending Requests */}
+              {/* Pending Requests (for user to respond) */}
               <Divider sx={{ mb: 3 }} />
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                 Pending Requests
@@ -314,6 +379,67 @@ const FamilyTreeBuilder = () => {
                 <Typography variant="body2" color="text.secondary">
                   No pending requests
                 </Typography>
+              )}
+
+              {/* Admin Approval Section */}
+              {isAdmin && pendingAdminApprovals.length > 0 && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography
+                    variant="h6"
+                    sx={{ mb: 2, fontWeight: 600, color: "warning.main" }}
+                  >
+                    ⚠️ Pending Admin Approval
+                  </Typography>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {pendingAdminApprovals.map((rel) => (
+                      <Paper
+                        key={rel._id}
+                        sx={{
+                          p: 2,
+                          bgcolor: "warning.lighter",
+                          border: 1,
+                          borderColor: "warning.main",
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>{rel.requester?.name}</strong> →{" "}
+                          <strong>{rel.recipient?.name}</strong>
+                          <br />
+                          Relationship: <strong>{rel.relationshipType}</strong>
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mb: 2, display: "block" }}
+                        >
+                          Both users have approved. Awaiting your admin
+                          approval.
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            onClick={() => handleAdminApprove(rel._id, true)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleAdminApprove(rel._id, false)}
+                          >
+                            Reject
+                          </Button>
+                        </Box>
+                      </Paper>
+                    ))}
+                  </Box>
+                </>
               )}
             </Box>
           ) : (

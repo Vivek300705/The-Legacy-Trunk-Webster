@@ -1,556 +1,808 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   Container,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Alert,
   Box,
-  IconButton,
-  Divider,
+  Typography,
+  Paper,
+  Button,
+  Avatar,
+  Chip,
   List,
   ListItem,
-  ListItemText,
   ListItemAvatar,
-  Avatar,
-  Grid,
-  Card,
-  CardContent,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
+  TextField,
+  Alert,
   CircularProgress,
-  Tabs,
-  Tab,
+  Snackbar,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  Badge,
 } from "@mui/material";
 import {
-  FamilyRestroom,
-  Add,
-  Delete,
-  Email,
-  PersonAdd,
   Edit,
-  Save,
-  Cancel,
+  Delete,
+  PersonAdd,
+  ExitToApp,
+  AccountTree,
+  ArrowBack,
   AdminPanelSettings,
-  Send,
   Close,
+  Visibility,
+  PendingActions,
+  Email,
+  Cancel as CancelIcon,
 } from "@mui/icons-material";
-import { useParams, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import {
   getFamilyCircle,
   inviteMember,
-  getCircleInvitations,
   removeMember,
+  leaveFamilyCircle,
+  deleteFamilyCircle,
   updateCircleName,
+  getCircleInvitations,
   cancelInvitation,
+  getPendingRelationshipsForAdmin,
 } from "../api/services";
 
-const FamilyCircleDetailsPage = () => {
+const FamilyCircleDetail = () => {
   const { circleId } = useParams();
   const navigate = useNavigate();
   const mongoUser = useSelector((state) => state.auth.mongoUser);
 
-  const [familyCircle, setFamilyCircle] = useState(null);
-  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [familyData, setFamilyData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [activeTab, setActiveTab] = useState(0);
+  const [error, setError] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Add Member Dialog State
+  // Dialog states
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Form states
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [newCircleName, setNewCircleName] = useState("");
+  const [invitations, setInvitations] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
 
-  // Edit Circle Name State
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
-  const [editNameLoading, setEditNameLoading] = useState(false);
+  // Snackbar
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
 
-  // Cancel invitation loading state
-  const [cancellingInviteId, setCancellingInviteId] = useState(null);
-
-  // Check if current user is admin
-  const isAdmin = familyCircle?.admin?._id === mongoUser?._id;
-
-  // Fetch family circle data
   useEffect(() => {
-    const fetchData = async () => {
-      if (!circleId) {
-        setError("No circle ID provided");
-        setLoading(false);
+    fetchFamilyData();
+    fetchInvitations();
+    fetchPendingApprovals();
+  }, [circleId]);
+
+  const fetchFamilyData = async () => {
+    try {
+      setLoading(true);
+      const data = await getFamilyCircle(circleId);
+      setFamilyData(data);
+      setNewCircleName(data.name);
+
+      // Check if current user is admin
+      const userIsAdmin = data.admin._id === mongoUser?._id;
+      setIsAdmin(userIsAdmin);
+    } catch (err) {
+      console.error("Error fetching family data:", err);
+      setError(err.response?.data?.message || "Failed to load family circle");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    try {
+      const data = await getCircleInvitations(circleId);
+      setInvitations(data);
+    } catch (err) {
+      console.error("Error fetching invitations:", err);
+    }
+  };
+
+  const fetchPendingApprovals = async () => {
+    try {
+      if (mongoUser) {
+        const approvals = await getPendingRelationshipsForAdmin();
+        setPendingApprovals(approvals);
+      }
+    } catch (err) {
+      console.error("Error fetching pending approvals:", err);
+    }
+  };
+
+  const handleInviteMember = async () => {
+    try {
+      if (!inviteEmail.trim()) {
+        setSnackbar({
+          open: true,
+          message: "Please enter an email address",
+          severity: "warning",
+        });
         return;
       }
 
-      try {
-        setLoading(true);
-        const circle = await getFamilyCircle(circleId);
-        setFamilyCircle(circle);
-        setEditedName(circle.name);
-
-        const invites = await getCircleInvitations(circleId);
-        setPendingInvitations(invites);
-      } catch (err) {
-        console.error("Error fetching circle:", err);
-        setError(err.response?.data?.message || "Failed to load family circle");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [circleId]);
-
-  // Validate email
-  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  // Handle invite member
-  const handleInviteMember = async () => {
-    const trimmedEmail = inviteEmail.trim().toLowerCase();
-
-    if (!trimmedEmail) {
-      setError("Please enter an email address");
-      return;
-    }
-
-    if (!isValidEmail(trimmedEmail)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    if (trimmedEmail === mongoUser?.email?.toLowerCase()) {
-      setError("You cannot invite yourself");
-      return;
-    }
-
-    // Check if already a member
-    const isMember = familyCircle?.member?.some(
-      (m) => m.email?.toLowerCase() === trimmedEmail
-    );
-    if (isMember) {
-      setError("This person is already a member");
-      return;
-    }
-
-    // Check if already invited
-    const isInvited = pendingInvitations.some(
-      (inv) => inv.email?.toLowerCase() === trimmedEmail
-    );
-    if (isInvited) {
-      setError("This person has already been invited");
-      return;
-    }
-
-    setInviteLoading(true);
-    setError("");
-
-    try {
-      await inviteMember(circleId, trimmedEmail);
-      setSuccess(`Invitation sent to ${trimmedEmail}`);
+      await inviteMember(circleId, inviteEmail);
+      setSnackbar({
+        open: true,
+        message: "Invitation sent successfully!",
+        severity: "success",
+      });
       setInviteEmail("");
       setInviteDialogOpen(false);
-
-      // Refresh invitations
-      const invites = await getCircleInvitations(circleId);
-      setPendingInvitations(invites);
+      fetchInvitations();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send invitation");
-    } finally {
-      setInviteLoading(false);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to send invitation",
+        severity: "error",
+      });
     }
   };
 
-  // Handle cancel invitation
   const handleCancelInvitation = async (invitationId) => {
-    if (!window.confirm("Are you sure you want to cancel this invitation?")) {
-      return;
-    }
-
-    setCancellingInviteId(invitationId);
-    setError("");
-
     try {
       await cancelInvitation(invitationId);
-      setSuccess("Invitation cancelled successfully");
-
-      // Remove from local state
-      setPendingInvitations((prev) =>
-        prev.filter((inv) => inv._id !== invitationId)
-      );
+      setSnackbar({
+        open: true,
+        message: "Invitation cancelled",
+        severity: "success",
+      });
+      fetchInvitations();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to cancel invitation");
-    } finally {
-      setCancellingInviteId(null);
+      setSnackbar({
+        open: true,
+        message: "Failed to cancel invitation",
+        severity: "error",
+      });
     }
   };
 
-  // Handle remove member (admin only)
-  const handleRemoveMember = async (memberId) => {
-    if (!window.confirm("Are you sure you want to remove this member?")) {
+  const handleRemoveMember = async (memberId, memberName) => {
+    if (!window.confirm(`Are you sure you want to remove ${memberName}?`)) {
       return;
     }
 
     try {
       await removeMember(circleId, memberId);
-      setSuccess("Member removed successfully");
-
-      // Refresh circle data
-      const circle = await getFamilyCircle(circleId);
-      setFamilyCircle(circle);
+      setSnackbar({
+        open: true,
+        message: "Member removed successfully",
+        severity: "success",
+      });
+      fetchFamilyData();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to remove member");
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to remove member",
+        severity: "error",
+      });
     }
   };
 
-  // Handle update circle name (admin only)
-  const handleUpdateName = async () => {
-    if (!editedName.trim()) {
-      setError("Circle name cannot be empty");
+  const handleUpdateCircleName = async () => {
+    try {
+      if (!newCircleName.trim()) {
+        setSnackbar({
+          open: true,
+          message: "Circle name cannot be empty",
+          severity: "warning",
+        });
+        return;
+      }
+
+      await updateCircleName(circleId, newCircleName);
+      setSnackbar({
+        open: true,
+        message: "Circle name updated successfully",
+        severity: "success",
+      });
+      setEditDialogOpen(false);
+      fetchFamilyData();
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to update circle name",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleLeaveCircle = async () => {
+    if (!window.confirm("Are you sure you want to leave this family circle?")) {
       return;
     }
-
-    if (editedName.trim() === familyCircle.name) {
-      setIsEditingName(false);
-      return;
-    }
-
-    setEditNameLoading(true);
-    setError("");
 
     try {
-      await updateCircleName(circleId, editedName.trim());
-      setSuccess("Circle name updated successfully");
-      setFamilyCircle({ ...familyCircle, name: editedName.trim() });
-      setIsEditingName(false);
+      await leaveFamilyCircle(circleId);
+      setSnackbar({
+        open: true,
+        message: "You have left the family circle",
+        severity: "success",
+      });
+      navigate("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update circle name");
-    } finally {
-      setEditNameLoading(false);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to leave circle",
+        severity: "error",
+      });
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditedName(familyCircle.name);
-    setIsEditingName(false);
+  const handleDeleteCircle = async () => {
+    try {
+      await deleteFamilyCircle(circleId);
+      setSnackbar({
+        open: true,
+        message: "Family circle deleted successfully",
+        severity: "success",
+      });
+      navigate("/dashboard");
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Failed to delete circle",
+        severity: "error",
+      });
+    }
   };
 
   if (loading) {
     return (
-      <Container
-        maxWidth="lg"
-        sx={{ py: 6, display: "flex", justifyContent: "center" }}
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
         <CircularProgress />
-      </Container>
+      </Box>
     );
   }
 
-  if (!familyCircle) {
+  if (error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 6 }}>
-        <Alert severity="error">Family circle not found</Alert>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Alert severity="error">{error}</Alert>
+        <Button
+          variant="contained"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate("/dashboard")}
+          sx={{ mt: 2 }}
+        >
+          Back to Dashboard
+        </Button>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header Section */}
-      <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mb: 2,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", flex: 1 }}>
-            <FamilyRestroom
-              sx={{ fontSize: 48, color: "primary.main", mr: 2 }}
-            />
-            {isEditingName ? (
-              <Box
-                sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1 }}
-              >
-                <TextField
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: 4 }}>
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate("/dashboard")}
+            sx={{ mb: 2 }}
+          >
+            Back to Dashboard
+          </Button>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="h3" fontWeight={700} gutterBottom>
+                {familyData?.name}
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Chip
+                  label={`${familyData?.member?.length || 0} Members`}
                   size="small"
-                  fullWidth
-                  autoFocus
-                />
-                <IconButton
                   color="primary"
-                  onClick={handleUpdateName}
-                  disabled={editNameLoading}
-                >
-                  <Save />
-                </IconButton>
-                <IconButton color="error" onClick={handleCancelEdit}>
-                  <Cancel />
-                </IconButton>
-              </Box>
-            ) : (
-              <Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {familyCircle.name}
-                  </Typography>
-                  {isAdmin && (
-                    <IconButton
-                      size="small"
-                      onClick={() => setIsEditingName(true)}
-                      color="primary"
-                    >
-                      <Edit fontSize="small" />
-                    </IconButton>
-                  )}
-                </Box>
+                />
                 {isAdmin && (
                   <Chip
                     icon={<AdminPanelSettings />}
                     label="Admin"
-                    color="primary"
                     size="small"
-                    sx={{ mt: 1 }}
+                    color="warning"
                   />
                 )}
               </Box>
-            )}
+            </Box>
+
+            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+              <Button
+                variant="contained"
+                startIcon={<AccountTree />}
+                onClick={() => navigate(`/family-tree/${circleId}`)}
+              >
+                Build Family Tree
+              </Button>
+
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<Visibility />}
+                onClick={() => navigate(`/family-tree-view/${circleId}`)}
+              >
+                View Tree
+              </Button>
+
+              {isAdmin && (
+                <Badge badgeContent={pendingApprovals.length} color="error">
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    startIcon={<AdminPanelSettings />}
+                    onClick={() => navigate(`/admin-dashboard/${circleId}`)}
+                  >
+                    Admin Dashboard
+                  </Button>
+                </Badge>
+              )}
+
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={() => setEditDialogOpen(true)}
+                  >
+                    Edit Circle
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Delete />}
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    Delete
+                  </Button>
+                </>
+              )}
+
+              {!isAdmin && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<ExitToApp />}
+                  onClick={handleLeaveCircle}
+                >
+                  Leave Circle
+                </Button>
+              )}
+            </Box>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<PersonAdd />}
-            onClick={() => setInviteDialogOpen(true)}
-            size="large"
-          >
-            Invite Member
-          </Button>
         </Box>
 
-        <Typography variant="body2" color="text.secondary">
-          Created {new Date(familyCircle.createdAt).toLocaleDateString()}
-        </Typography>
-      </Paper>
+        {/* Admin Alert for Pending Approvals */}
+        {isAdmin && pendingApprovals.length > 0 && (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => navigate(`/admin-dashboard/${circleId}`)}
+              >
+                View All
+              </Button>
+            }
+            sx={{ mb: 3 }}
+          >
+            You have <strong>{pendingApprovals.length}</strong> relationship
+            {pendingApprovals.length > 1 ? "s" : ""} awaiting admin approval
+          </Alert>
+        )}
 
-      {/* Alerts */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess("")}>
-          {success}
-        </Alert>
-      )}
-
-      {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
-          <Tab label={`Members (${familyCircle.member?.length || 0})`} />
-          <Tab label={`Pending Invitations (${pendingInvitations.length})`} />
-        </Tabs>
-      </Paper>
-
-      {/* Tab Content */}
-      {activeTab === 0 && (
         <Grid container spacing={3}>
-          {familyCircle.member?.map((member) => (
-            <Grid item xs={12} sm={6} md={4} key={member._id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: "primary.main",
-                        width: 56,
-                        height: 56,
-                        mr: 2,
-                      }}
-                    >
-                      {member.name?.charAt(0)?.toUpperCase() || "?"}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {member.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {member.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {member._id === familyCircle.admin._id && (
-                    <Chip
-                      icon={<AdminPanelSettings />}
-                      label="Admin"
-                      color="primary"
-                      size="small"
-                      sx={{ mb: 1 }}
-                    />
-                  )}
-
-                  {isAdmin && member._id !== familyCircle.admin._id && (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<Delete />}
-                      onClick={() => handleRemoveMember(member._id)}
-                      sx={{ mt: 1 }}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      )}
-
-      {activeTab === 1 && (
-        <Grid container spacing={3}>
-          {pendingInvitations.length === 0 ? (
-            <Grid item xs={12}>
-              <Paper sx={{ p: 4, textAlign: "center" }}>
-                <Email sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
-                <Typography variant="h6" color="text.secondary">
-                  No pending invitations
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
+          {/* Admin Info Card */}
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Circle Admin
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Avatar
+                  src={familyData?.admin?.profilePicture}
+                  sx={{ width: 60, height: 60, bgcolor: "primary.main" }}
                 >
-                  Invite family members to join your circle
+                  {familyData?.admin?.name?.charAt(0)}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {familyData?.admin?.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {familyData?.admin?.email}
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+
+            {/* Quick Stats */}
+            {isAdmin && (
+              <Paper sx={{ p: 3, borderRadius: 2, mt: 2 }}>
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                  Quick Stats
                 </Typography>
-              </Paper>
-            </Grid>
-          ) : (
-            pendingInvitations.map((invite) => (
-              <Grid item xs={12} sm={6} md={4} key={invite._id}>
-                <Card elevation={2}>
-                  <CardContent>
-                    <Box
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Card
+                      sx={{ textAlign: "center", bgcolor: "primary.lighter" }}
+                    >
+                      <CardContent>
+                        <Typography
+                          variant="h4"
+                          fontWeight={700}
+                          color="primary.main"
+                        >
+                          {familyData?.member?.length || 0}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Members
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Card
+                      sx={{ textAlign: "center", bgcolor: "warning.lighter" }}
+                    >
+                      <CardContent>
+                        <Typography
+                          variant="h4"
+                          fontWeight={700}
+                          color="warning.main"
+                        >
+                          {pendingApprovals.length}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Pending
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Card sx={{ textAlign: "center", bgcolor: "info.lighter" }}>
+                      <CardContent>
+                        <Typography
+                          variant="h4"
+                          fontWeight={700}
+                          color="info.main"
+                        >
+                          {invitations.length}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Invites
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Card
                       sx={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        justifyContent: "space-between",
-                        mb: 2,
+                        textAlign: "center",
+                        bgcolor: "success.lighter",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          transform: "scale(1.05)",
+                          boxShadow: 2,
+                        },
+                      }}
+                      onClick={() => navigate(`/family-tree-view/${circleId}`)}
+                    >
+                      <CardContent>
+                        <AccountTree color="success" />
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          View Tree
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
+          </Grid>
+
+          {/* Members List */}
+          <Grid item xs={12} md={8}>
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="h6" fontWeight={600}>
+                  Family Members ({familyData?.member?.length || 0})
+                </Typography>
+                {isAdmin && (
+                  <Button
+                    variant="contained"
+                    startIcon={<PersonAdd />}
+                    onClick={() => setInviteDialogOpen(true)}
+                  >
+                    Invite Member
+                  </Button>
+                )}
+              </Box>
+
+              <Divider sx={{ mb: 2 }} />
+
+              <List>
+                {familyData?.member?.map((member) => (
+                  <ListItem
+                    key={member._id}
+                    sx={{
+                      borderRadius: 1,
+                      mb: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
+                    }}
+                  >
+                    <ListItemAvatar>
+                      <Avatar
+                        src={member.profilePicture}
+                        sx={{ bgcolor: "primary.main" }}
+                      >
+                        {member.name?.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Typography variant="subtitle1" fontWeight={600}>
+                            {member.name}
+                          </Typography>
+                          {member._id === familyData?.admin?._id && (
+                            <Chip
+                              label="Admin"
+                              size="small"
+                              color="warning"
+                              sx={{ height: 20 }}
+                            />
+                          )}
+                          {member._id === mongoUser?._id && (
+                            <Chip
+                              label="You"
+                              size="small"
+                              color="primary"
+                              sx={{ height: 20 }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={member.email}
+                    />
+                    {isAdmin && member._id !== familyData?.admin?._id && (
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() =>
+                            handleRemoveMember(member._id, member.name)
+                          }
+                        >
+                          <Delete />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    )}
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+
+            {/* Pending Invitations */}
+            {isAdmin && invitations.length > 0 && (
+              <Paper sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                >
+                  <Email color="primary" />
+                  <Typography variant="h6" fontWeight={600}>
+                    Pending Invitations ({invitations.length})
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                <List>
+                  {invitations.map((invitation) => (
+                    <ListItem
+                      key={invitation._id}
+                      sx={{
+                        borderRadius: 1,
+                        mb: 1,
+                        border: "1px solid",
+                        borderColor: "warning.main",
+                        bgcolor: "warning.lighter",
                       }}
                     >
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", flex: 1 }}
-                      >
-                        <Avatar sx={{ bgcolor: "info.main", mr: 2 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: "warning.main" }}>
                           <Email />
                         </Avatar>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                            {invite.email}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Invited by {invite.invitedBy?.name}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      {isAdmin && (
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleCancelInvitation(invite._id)}
-                          disabled={cancellingInviteId === invite._id}
-                        >
-                          {cancellingInviteId === invite._id ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <Close />
-                          )}
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Sent {new Date(invite.createdAt).toLocaleDateString()}
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      <Chip
-                        label="Pending"
-                        size="small"
-                        color="warning"
-                        variant="outlined"
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={invitation.email}
+                        secondary={`Invited by ${
+                          invitation.invitedBy?.name
+                        } • Expires ${new Date(
+                          invitation.expiresAt
+                        ).toLocaleDateString()}`}
                       />
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          )}
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleCancelInvitation(invitation._id)}
+                        >
+                          <CancelIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              </Paper>
+            )}
+          </Grid>
         </Grid>
-      )}
 
-      {/* Invite Member Dialog */}
-      <Dialog
-        open={inviteDialogOpen}
-        onClose={() => {
-          setInviteDialogOpen(false);
-          setInviteEmail("");
-          setError("");
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Invite Family Member</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Enter the email address of the person you'd like to invite to your
-            family circle.
-          </Typography>
-          <TextField
-            fullWidth
-            label="Email Address"
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                handleInviteMember();
-              }
-            }}
-            placeholder="example@email.com"
-            autoFocus
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setInviteDialogOpen(false);
-              setInviteEmail("");
-              setError("");
-            }}
+        {/* Invite Member Dialog */}
+        <Dialog
+          open={inviteDialogOpen}
+          onClose={() => setInviteDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Invite Family Member</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Email Address"
+              type="email"
+              fullWidth
+              variant="outlined"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setInviteDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleInviteMember}
+              variant="contained"
+              startIcon={<PersonAdd />}
+            >
+              Send Invitation
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Edit Circle Name Dialog */}
+        <Dialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Edit Circle Name</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Circle Name"
+              type="text"
+              fullWidth
+              variant="outlined"
+              value={newCircleName}
+              onChange={(e) => setNewCircleName(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleUpdateCircleName}
+              variant="contained"
+              startIcon={<Edit />}
+            >
+              Update Name
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Circle Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+          maxWidth="sm"
+        >
+          <DialogTitle>Delete Family Circle</DialogTitle>
+          <DialogContent>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              This action cannot be undone!
+            </Alert>
+            <Typography>
+              Are you sure you want to delete{" "}
+              <strong>{familyData?.name}</strong>? All members will be removed
+              from the circle.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleDeleteCircle}
+              variant="contained"
+              color="error"
+              startIcon={<Delete />}
+            >
+              Delete Circle
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setSnackbar({ ...snackbar, open: false })}
+            severity={snackbar.severity}
+            sx={{ width: "100%" }}
           >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Send />}
-            onClick={handleInviteMember}
-            disabled={inviteLoading || !inviteEmail.trim()}
-          >
-            {inviteLoading ? "Sending..." : "Send Invitation"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 
-export default FamilyCircleDetailsPage;
+export default FamilyCircleDetail;

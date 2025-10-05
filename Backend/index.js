@@ -12,6 +12,7 @@ import storyRoutes from "./src/routes/storyRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import mediaRoutes from "./src/routes/mediaRoutes.js"; // ✅ Add this import
+import searchRoutes from "./src/routes/searchRoutes.js";
 
 // Import your service account key for Firebase using createRequire
 const require = createRequire(import.meta.url);
@@ -27,13 +28,7 @@ app.use(express.json()); // To parse JSON request bodies
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
-console.log("Cloudinary Config Check:");
-console.log("Cloud Name:", process.env.CLOUDINARY_CLOUD_NAME);
-console.log("API Key:", process.env.CLOUDINARY_API_KEY);
-console.log(
-  "API Secret:",
-  process.env.CLOUDINARY_API_SECRET ? "Set ✓" : "Missing ✗"
-);
+
 
 // Database Connection
 mongoose
@@ -51,6 +46,7 @@ app.use("/api/stories", storyRoutes);
 app.use("/api/relationships", relationshipRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/media", mediaRoutes); // ✅ Add this line
+app.use("/api/search", searchRoutes); // ✅ Add search routes
 
 // Health check endpoint
 app.get("/", (req, res) => {

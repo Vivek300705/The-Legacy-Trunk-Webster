@@ -104,7 +104,7 @@ export const sendRelationshipRequest = async (
   recipientId,
   relationshipType
 ) => {
-  const response = await api.post("/relationships/request", {
+  const response = await api.post("/relationships", {
     recipientId,
     relationshipType,
   });
@@ -116,15 +116,27 @@ export const getPendingRequests = async () => {
   return response.data;
 };
 
-export const respondToRequest = async (requestId, response) => {
-  const res = await api.put(`/relationships/respond/${requestId}`, {
-    response,
+export const respondToRequest = async (requestId, action) => {
+  const response = await api.put(`/relationships/${requestId}`, {
+    action, // should be 'approved' or 'rejected'
   });
-  return res.data;
+  return response.data;
 };
 
 export const getApprovedRelationships = async () => {
   const response = await api.get("/relationships/approved");
+  return response.data;
+};
+
+export const getPendingRelationshipsForAdmin = async () => {
+  const response = await api.get("/relationships/admin/pending");
+  return response.data;
+};
+
+export const adminApproveRelationship = async (requestId, approved) => {
+  const response = await api.put(`/relationships/admin/approve/${requestId}`, {
+    approved,
+  });
   return response.data;
 };
 
@@ -180,5 +192,24 @@ export const uploadMedia = async (storyId, file, description = "") => {
       "Content-Type": "multipart/form-data",
     },
   });
+  return response.data;
+};
+
+
+export const searchContent = async (query, filters = {}) => {
+  const params = new URLSearchParams();
+  params.append("q", query);
+
+  if (filters.type) params.append("type", filters.type);
+  if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.append("dateTo", filters.dateTo);
+
+  const response = await api.get(`/search?${params.toString()}`);
+  return response.data;
+};
+
+
+export const getFamilyTreeData = async (circleId) => {
+  const response = await api.get(`/family-circles/${circleId}/tree`);
   return response.data;
 };

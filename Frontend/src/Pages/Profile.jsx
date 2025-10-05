@@ -12,6 +12,9 @@ import {
   Card,
   CardContent,
   Stack,
+  Alert,
+  Badge,
+  Divider,
 } from "@mui/material";
 import {
   Edit,
@@ -20,10 +23,19 @@ import {
   FamilyRestroom,
   AutoStories,
   ArrowForward,
+  AdminPanelSettings,
+  CheckCircle,
+  PendingActions,
+  AccountTree,
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { getUserOwnStories } from "../api/services";
+import {
+  getUserOwnStories,
+  getPendingRelationshipsForAdmin,
+  adminApproveRelationship,
+  getFamilyCircle,
+} from "../api/services";
 import api from "../api/axiosConfig";
 
 const Profile = () => {
@@ -53,6 +65,12 @@ const Profile = () => {
 
   const [recentStories, setRecentStories] = useState([]);
 
+  // Admin-related states
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [familyCircle, setFamilyCircle] = useState(null);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -70,6 +88,36 @@ const Profile = () => {
 
         const stories = await getUserOwnStories(6, 0);
         setRecentStories(stories.stories || []);
+
+        // Check if user is admin of a family circle
+        console.log("Profile familyCircle:", profile.familyCircle);
+        if (profile.familyCircle) {
+          try {
+            const circle = await getFamilyCircle(profile.familyCircle);
+            console.log("Fetched circle:", circle);
+            setFamilyCircle(circle);
+
+            console.log("Circle admin ID:", circle.admin._id);
+            console.log("Current user ID:", mongoUser?._id);
+
+            const userIsAdmin = circle.admin._id === mongoUser?._id;
+            console.log("Is user admin?", userIsAdmin);
+            setIsAdmin(userIsAdmin);
+
+            // Fetch pending approvals if admin
+            if (userIsAdmin) {
+              console.log("Fetching pending approvals...");
+              const approvals = await getPendingRelationshipsForAdmin();
+              console.log("Pending approvals:", approvals);
+              setPendingApprovals(approvals);
+            }
+          } catch (err) {
+            console.error("Error fetching family circle:", err);
+            console.error("Error details:", err.response?.data);
+          }
+        } else {
+          console.log("User is not in a family circle");
+        }
       } catch (err) {
         console.error("Error fetching profile data:", err);
         setError("Failed to load profile data");
@@ -109,11 +157,46 @@ const Profile = () => {
 
   const handleStoryClick = (storyId) => navigate(`/story-detail/${storyId}`);
 
+  const handleApproveRelationship = async (relationshipId, approve) => {
+    try {
+      setAdminLoading(true);
+      await adminApproveRelationship(relationshipId, approve);
+
+      // Remove from pending list
+      setPendingApprovals((prev) =>
+        prev.filter((r) => r._id !== relationshipId)
+      );
+
+      setSuccess(
+        `Relationship ${approve ? "approved" : "rejected"} successfully!`
+      );
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error("Admin approval error:", err);
+      setError(err.response?.data?.message || "Failed to process request");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   if (loading) return <Typography sx={{ p: 4 }}>Loading...</Typography>;
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#FAFAFA", py: 4 }}>
       <Container maxWidth="lg">
+        {/* Success/Error Messages */}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {success}
+          </Alert>
+        )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
         {/* Top Section - Profile Card */}
         <Paper
           elevation={0}
@@ -156,13 +239,30 @@ const Profile = () => {
                 >
                   {mongoUser?.email}
                 </Typography>
-                {role && (
-                  <Chip
-                    label={role}
-                    color="primary"
-                    sx={{ fontWeight: 500, px: 2 }}
-                  />
-                )}
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                  }}
+                >
+                  {role && (
+                    <Chip
+                      label={role}
+                      color="primary"
+                      sx={{ fontWeight: 500, px: 2 }}
+                    />
+                  )}
+                  {isAdmin && (
+                    <Chip
+                      icon={<AdminPanelSettings />}
+                      label="Admin"
+                      color="warning"
+                      sx={{ fontWeight: 500, px: 2 }}
+                    />
+                  )}
+                </Box>
               </Box>
             </Grid>
 
@@ -244,6 +344,234 @@ const Profile = () => {
             </Grid>
           </Grid>
         </Paper>
+
+        {/* Admin Section - Only shown if user is admin */}
+        {isAdmin && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              mb: 3,
+              borderRadius: 3,
+              border: "2px solid",
+              borderColor: "warning.main",
+              bgcolor: "warning.lighter",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <AdminPanelSettings
+                  sx={{ fontSize: 28, color: "warning.dark", mr: 1.5 }}
+                />
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  Admin Dashboard
+                </Typography>
+              </Box>
+              <Badge badgeContent={pendingApprovals.length} color="error">
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={() =>
+                    navigate(`/admin-dashboard/${familyCircle._id}`)
+                  }
+                >
+                  View Full Dashboard
+                </Button>
+              </Badge>
+            </Box>
+
+            <Divider sx={{ mb: 2 }} />
+
+            <Grid container spacing={2}>
+              {/* Quick Stats */}
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ bgcolor: "background.paper" }}>
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <PendingActions color="warning" />
+                      <Typography variant="h4" fontWeight={700}>
+                        {pendingApprovals.length}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Pending Approvals
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ bgcolor: "background.paper" }}>
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <FamilyRestroom color="primary" />
+                      <Typography variant="h4" fontWeight={700}>
+                        {familyCircle?.member?.length || 0}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Family Members
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card
+                  sx={{
+                    bgcolor: "primary.main",
+                    color: "white",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      transform: "translateY(-2px)",
+                      boxShadow: 3,
+                    },
+                  }}
+                  onClick={() => navigate(`/family-tree/${familyCircle._id}`)}
+                >
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 1,
+                      }}
+                    >
+                      <AccountTree />
+                      <Typography variant="body1" fontWeight={600}>
+                        Manage
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2">Family Tree</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
+            {/* Recent Pending Approvals */}
+            {pendingApprovals.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                  Recent Pending Approvals (showing{" "}
+                  {Math.min(3, pendingApprovals.length)} of{" "}
+                  {pendingApprovals.length})
+                </Typography>
+                <Stack spacing={2}>
+                  {pendingApprovals.slice(0, 3).map((relationship) => (
+                    <Card
+                      key={relationship._id}
+                      sx={{ bgcolor: "background.paper" }}
+                    >
+                      <CardContent>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: "wrap",
+                            gap: 2,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
+                            }}
+                          >
+                            <Avatar
+                              src={relationship.requester?.profilePicture}
+                            >
+                              {relationship.requester?.name?.charAt(0)}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" fontWeight={600}>
+                                {relationship.requester?.name}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {relationship.relationshipType} →{" "}
+                                {relationship.recipient?.name}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: "flex", gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              disabled={adminLoading}
+                              onClick={() =>
+                                handleApproveRelationship(
+                                  relationship._id,
+                                  false
+                                )
+                              }
+                            >
+                              Reject
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              disabled={adminLoading}
+                              startIcon={<CheckCircle />}
+                              onClick={() =>
+                                handleApproveRelationship(
+                                  relationship._id,
+                                  true
+                                )
+                              }
+                            >
+                              Approve
+                            </Button>
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+                {pendingApprovals.length > 3 && (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    sx={{ mt: 2 }}
+                    onClick={() =>
+                      navigate(`/admin-dashboard/${familyCircle._id}`)
+                    }
+                  >
+                    View All {pendingApprovals.length} Pending Approvals
+                  </Button>
+                )}
+              </Box>
+            )}
+          </Paper>
+        )}
 
         {/* Family Connections */}
         <Paper

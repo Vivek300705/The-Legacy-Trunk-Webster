@@ -3,7 +3,9 @@ import {
   sendRequest,
   getPendingRequests,
   respondToRequest,
-  getUserRelationships, // Add this import
+  getUserRelationships,
+  getPendingRelationshipsForAdmin,
+  adminApproveRelationship, // Add this import
 } from "../controllers/relationshipController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
@@ -23,5 +25,9 @@ router.get("/pending", getPendingRequests);
 
 // Respond to a specific request (approve/reject)
 router.put("/:requestId", respondToRequest);
+
+// Add these routes
+router.get("/admin/pending", getPendingRelationshipsForAdmin);
+router.put("/admin/approve/:requestId", adminApproveRelationship);
 
 export default router;

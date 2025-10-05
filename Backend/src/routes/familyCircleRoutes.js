@@ -11,6 +11,7 @@ import {
   deleteFamilyCircle,
   updateCircleName,
   cancelInvitation,
+  getFamilyTreeData,
 } from "../controllers/familyCircleController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
@@ -29,11 +30,11 @@ router.post("/accept-invite/:token", acceptInvitation);
 // Cancel invitation (specific route before /:circleId)
 router.delete("/invitations/:invitationId", cancelInvitation);
 
+// Update circle name - FIXED
+router.put("/:circleId", updateCircleName);
+
 // Get family circle
 router.get("/:circleId", getFamilyCircle);
-
-// Update circle name (Admin only)
-router.put("/:circleId/name", updateCircleName);
 
 // Get members
 router.get("/:circleId/members", getFamilyMembers);
@@ -47,10 +48,15 @@ router.get("/:circleId/invitations", getCircleInvitations);
 // Leave circle
 router.post("/:circleId/leave", leaveFamilyCircle);
 
-// Remove member
+// Remove member - THIS IS THE CRITICAL ONE FOR YOUR ISSUE
 router.delete("/:circleId/members/:memberId", removeMember);
 
-// Delete circle
+// Add before /:circleId routes
+router.get("/:circleId/tree", getFamilyTreeData);
+
+// Delete circle - Must be LAST
 router.delete("/:circleId", deleteFamilyCircle);
+
+
 
 export default router;

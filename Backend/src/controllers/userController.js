@@ -7,7 +7,7 @@ export const getUserProfile = async (req, res) => {
       path: "familyCircle",
       populate: {
         path: "member admin",
-        select: "name email profilePictur",
+        select: "name email profilePicture",
       },
     });
 
@@ -20,7 +20,7 @@ export const getUserProfile = async (req, res) => {
       firebaseUID: user.firebaseUID,
       email: user.email,
       name: user.name,
-      profilePictur: user.profilePictur,
+      profilePicture: user.profilePicture,
       familyCircle: user.familyCircle,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -36,21 +36,21 @@ export const getUserProfile = async (req, res) => {
 // Update user profile
 export const updateUserProfile = async (req, res) => {
   try {
-    const { name, profilePictur } = req.body;
+    const { name, profilePicture } = req.body;
     const userId = req.user._id;
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
         ...(name && { name }),
-        ...(profilePictur && { profilePictur }),
+        ...(profilePicture && { profilePicture }),
       },
       { new: true, runValidators: true }
     ).populate({
       path: "familyCircle",
       populate: {
         path: "member admin",
-        select: "name email profilePictur",
+        select: "name email profilePicture",
       },
     });
 
