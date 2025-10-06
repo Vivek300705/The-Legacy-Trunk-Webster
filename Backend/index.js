@@ -33,7 +33,17 @@ const serviceAccount = {
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://the-legacy-trunk-webster-4oyf-vivek300705s-projects.vercel.app", // ✅ Your actual Vercel URL
+      "https://the-legacy-trunk-webster-4oyf.vercel.app", // ✅ Alternative Vercel URL
+      "http://localhost:5173", // ✅ Vite dev server
+      "http://localhost:3000",
+    ],
+    credentials: true,
+  })
+);
 app.use(express.json()); // To parse JSON request bodies
 
 // Initialize Firebase Admin SDK
