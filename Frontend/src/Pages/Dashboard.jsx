@@ -328,7 +328,7 @@ const Dashboard = () => {
                     boxShadow: 4,
                   },
                 }}
-                onClick={() => navigate(`/story-detail?id=${story._id}`)}
+                onClick={() => navigate(`/story-detail/${story._id}`)}
               >
                 <CardContent>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>

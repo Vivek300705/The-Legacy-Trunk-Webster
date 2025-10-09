@@ -6,6 +6,7 @@ import {
   Paper,
   List,
   ListItem,
+  ListItemButton,
   ListItemAvatar,
   ListItemText,
   Avatar,
@@ -233,37 +234,28 @@ const FamilyTreeBuilder = () => {
               first.
             </Typography>
           ) : (
-            <List>
-              {familyMembers.map((member) => (
-                <ListItem
-                  key={member._id}
-                  button
-                  selected={selectedPerson?._id === member._id}
-                  onClick={() => handlePersonClick(member)}
-                  sx={{
-                    borderRadius: 1,
-                    mb: 1,
-                    "&.Mui-selected": {
-                      bgcolor: "primary.light",
-                      "&:hover": {
-                        bgcolor: "primary.light",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: "primary.main" }}>
-                      {member.name?.charAt(0) || "U"}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={member.name}
-                    secondary={member.email}
-                    secondaryTypographyProps={{ noWrap: true }}
-                  />
-                </ListItem>
-              ))}
-            </List>
+           <List>
+  {familyMembers.map((member) => (
+    <ListItem key={member._id} disablePadding sx={{ mb: 1 }}>
+      <ListItemButton
+        selected={selectedPerson?._id === member._id}
+        onClick={() => handlePersonClick(member)}
+        sx={{ borderRadius: 1 }}
+      >
+        <ListItemAvatar>
+          <Avatar sx={{ bgcolor: "primary.main" }}>
+            {member.name?.charAt(0) || "U"}
+          </Avatar>
+        </ListItemAvatar>
+        <ListItemText
+          primary={member.name}
+          secondary={member.email}
+          secondaryTypographyProps={{ noWrap: true }}
+        />
+      </ListItemButton>
+    </ListItem>
+  ))}
+</List>
           )}
         </Paper>
 

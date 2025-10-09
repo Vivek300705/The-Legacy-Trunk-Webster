@@ -3,37 +3,69 @@ import Media from "../models/Media.model.js";
 
 // =================== CREATE STORY ===================
 export const createStory = async (req, res) => {
-  try {
-    const { title, content, eventDate, tags } = req.body;
-    const userId = req.user._id;
-    const userFamilyCircle = req.user.familyCircle;
 
-    if (!userFamilyCircle) {
-      return res.status(400).json({
-        message: "You must be part of a family circle to create stories",
-      });
-    }
+try {
 
-    const newStory = await Story.create({
-      title,
-      content,
-      author: userId,
-      familyCircle: userFamilyCircle,
-      eventDate: eventDate || new Date(),
-      tags: tags || [],
-    });
+const { title, content, eventDate, tags } = req.body;
 
-    const populatedStory = await Story.findById(newStory._id)
-      .populate("author", "name email profilePicture")
-      .populate("familyCircle", "name");
+const userId = req.user._id;
 
-    res.status(201).json(populatedStory);
-  } catch (error) {
-    console.error("Error creating story:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating story", error: error.message });
-  }
+const userFamilyCircle = req.user.familyCircle;
+
+
+
+if (!userFamilyCircle) {
+
+return res.status(400).json({
+
+message: "You must be part of a family circle to create stories",
+
+});
+
+}
+
+
+
+const newStory = await Story.create({
+
+title,
+
+content,
+
+author: userId,
+
+familyCircle: userFamilyCircle,
+
+eventDate: eventDate || new Date(),
+
+tags: tags || [],
+
+});
+
+
+
+const populatedStory = await Story.findById(newStory._id)
+
+.populate("author", "name email profilePicture")
+
+.populate("familyCircle", "name");
+
+
+
+res.status(201).json(populatedStory);
+
+} catch (error) {
+
+console.error("Error creating story:", error);
+
+res
+
+.status(500)
+
+.json({ message: "Error creating story", error: error.message });
+
+}
+
 };
 
 // =================== GET USER STORIES ===================

@@ -1,6 +1,10 @@
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
+console.log('--- Checking Environment Variables ---');
+console.log('MONGO_URI Loaded:', process.env.MONGO_URI ? 'Yes' : 'No');
+console.log('OPENAI_API_KEY Loaded:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
+console.log('------------------------------------');
 import mongoose from "mongoose";
 import cors from "cors";
 import admin from "firebase-admin";
