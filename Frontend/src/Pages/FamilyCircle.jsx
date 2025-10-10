@@ -364,13 +364,9 @@ const FamilyCircleWizard = () => {
                   {pendingInvitations.map((invite) => (
                     <Grid item xs={12} sm={6} key={invite._id}>
                       <Alert severity="info" icon={<Email />}>
-<<<<<<< HEAD
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {invite.email}
                         </Typography>
-=======
-                        <Typography variant="body2">{invite.email}</Typography>
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                         <Typography variant="caption" color="text.secondary">
                           Invited by {invite.invitedBy?.name}
                         </Typography>
@@ -381,7 +377,6 @@ const FamilyCircleWizard = () => {
               </Box>
             )}
 
-<<<<<<< HEAD
             <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
               <Button
                 variant="outlined"
@@ -398,15 +393,6 @@ const FamilyCircleWizard = () => {
                 Go to Circle Page
               </Button>
             </Box>
-=======
-            <Button
-              sx={{ mt: 3 }}
-              variant="contained"
-              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
-            >
-              Go to Circle Page
-            </Button>
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
           </Box>
         )}
       </Paper>
