@@ -3,69 +3,38 @@ import Media from "../models/Media.model.js";
 
 // =================== CREATE STORY ===================
 export const createStory = async (req, res) => {
+  try {
+    // 👇 1. Add 'tags' back to the fields read from the body
+    const { title, content, eventDate, tags } = req.body;
+    const user = req.user;
 
-try {
+    if (!user.familyCircle) {
+      return res.status(400).json({
+        message: "You must be part of a family circle to create stories",
+      });
+    }
 
-const { title, content, eventDate, tags } = req.body;
+    const newStory = new Story({
+      title,
+      content,
+      author: user._id,
+      familyCircle: user.familyCircle,
+      eventDate: eventDate || new Date(),
+      tags: tags || [], // 👇 2. Save the provided tags, or an empty array
+    });
 
-const userId = req.user._id;
+    await newStory.save();
 
-const userFamilyCircle = req.user.familyCircle;
+    const populatedStory = await Story.findById(newStory._id)
+      .populate("author", "name email profilePicture");
 
-
-
-if (!userFamilyCircle) {
-
-return res.status(400).json({
-
-message: "You must be part of a family circle to create stories",
-
-});
-
-}
-
-
-
-const newStory = await Story.create({
-
-title,
-
-content,
-
-author: userId,
-
-familyCircle: userFamilyCircle,
-
-eventDate: eventDate || new Date(),
-
-tags: tags || [],
-
-});
-
-
-
-const populatedStory = await Story.findById(newStory._id)
-
-.populate("author", "name email profilePicture")
-
-.populate("familyCircle", "name");
-
-
-
-res.status(201).json(populatedStory);
-
-} catch (error) {
-
-console.error("Error creating story:", error);
-
-res
-
-.status(500)
-
-.json({ message: "Error creating story", error: error.message });
-
-}
-
+    res.status(201).json(populatedStory);
+  } catch (error) {
+    console.error("Error creating story:", error);
+    res
+      .status(500)
+      .json({ message: "Error creating story", error: error.message });
+  }
 };
 
 // =================== GET USER STORIES ===================

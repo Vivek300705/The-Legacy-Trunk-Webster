@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  Container,
   Box,
   Typography,
   TextField,
@@ -18,9 +17,6 @@ import {
   Divider,
 } from "@mui/material";
 import {
-  FormatBold,
-  FormatItalic,
-  FormatListBulleted,
   CloudUpload,
   Close,
   Save,
@@ -29,6 +25,9 @@ import {
   VideoLibrary,
   AudioFile,
   Cancel,
+  FormatBold,
+  FormatItalic,
+  FormatListBulleted,
 } from "@mui/icons-material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -46,9 +45,9 @@ const StoryEditor = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [content, setContent] = useState("");
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState("");
-  const [content, setContent] = useState("");
   const [uploadedMedia, setUploadedMedia] = useState([]);
   const [existingMedia, setExistingMedia] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,32 +56,31 @@ const StoryEditor = () => {
 
   useEffect(() => {
     if (storyId) {
+      setIsEditMode(true);
+      const loadStoryForEdit = async () => {
+        try {
+          setInitialLoading(true);
+          const story = await getStoryById(storyId);
+          setTitle(story.title || "");
+          setContent(story.content || "");
+          setTags(story.tags || []);
+          setDate(
+            story.eventDate
+              ? new Date(story.eventDate).toISOString().split("T")[0]
+              : ""
+          );
+          setExistingMedia(story.media || []);
+        } catch (err) {
+          console.error("Error loading story:", err);
+          setError("Failed to load story for editing");
+        } finally {
+          setInitialLoading(false);
+        }
+      };
       loadStoryForEdit();
     }
   }, [storyId]);
-
-  const loadStoryForEdit = async () => {
-    try {
-      setInitialLoading(true);
-      const story = await getStoryById(storyId);
-      setTitle(story.title || "");
-      setContent(story.content || "");
-      setTags(story.tags || []);
-      setDate(
-        story.date || story.eventDate
-          ? new Date(story.date || story.eventDate).toISOString().split("T")[0]
-          : ""
-      );
-      setExistingMedia(story.media || []);
-      setIsEditMode(true);
-    } catch (err) {
-      console.error("Error loading story:", err);
-      setError("Failed to load story for editing");
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
+  
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()]);
@@ -103,7 +101,7 @@ const StoryEditor = () => {
       url: URL.createObjectURL(file),
       file: file,
     }));
-    setUploadedMedia([...uploadedMedia, ...newMedia]);
+    setUploadedMedia((prev) => [...prev, ...newMedia]);
   };
 
   const handleRemoveMedia = (id) => {
@@ -111,17 +109,12 @@ const StoryEditor = () => {
     if (media?.url) {
       URL.revokeObjectURL(media.url);
     }
-    setUploadedMedia(uploadedMedia.filter((media) => media.id !== id));
+    setUploadedMedia((prev) => prev.filter((m) => m.id !== id));
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      setError("Please enter a title for your story");
-      return;
-    }
-
-    if (!content.trim()) {
-      setError("Please write some content for your story");
+    if (!title.trim() || !content.trim()) {
+      setError("Title and content are required.");
       return;
     }
 
@@ -133,116 +126,52 @@ const StoryEditor = () => {
         title,
         content,
         eventDate: date || new Date().toISOString(),
-        tags,
+        tags: tags,
       };
 
-      if (isEditMode && storyId) {
+      let savedStoryId = storyId;
+
+      if (isEditMode) {
         const updatedStory = await updateStory(storyId, storyData);
-
-        if (uploadedMedia.length > 0) {
-          try {
-            await Promise.all(
-              uploadedMedia.map((media) => uploadMedia(storyId, media.file, ""))
-            );
-          } catch (mediaErr) {
-            console.error("Media upload failed:", mediaErr);
-            setError(
-              `Story updated but some media files failed to upload: ${
-                mediaErr.response?.data?.message || mediaErr.message
-              }`
-            );
-            setTimeout(() => navigate(`/story-detail/${storyId}`), 3000);
-            return;
-          }
-        }
-
-        navigate(`/story-detail/${storyId}`);
+        savedStoryId = updatedStory._id;
       } else {
         const newStory = await createStory(storyData);
-
-        if (uploadedMedia.length > 0) {
-          try {
-            await Promise.all(
-              uploadedMedia.map((media) =>
-                uploadMedia(newStory._id, media.file, "")
-              )
-            );
-          } catch (mediaErr) {
-            console.error("Media upload failed:", mediaErr);
-            setError(
-              `Story created but some media files failed to upload: ${
-                mediaErr.response?.data?.message || mediaErr.message
-              }`
-            );
-            setTimeout(() => navigate("/timeline"), 3000);
-            return;
-          }
-        }
-
-        navigate("/timeline");
+        savedStoryId = newStory._id;
       }
+
+      if (uploadedMedia.length > 0) {
+        await Promise.all(
+          uploadedMedia.map((media) =>
+            uploadMedia(savedStoryId, media.file, "")
+          )
+        );
+      }
+      
+      navigate(isEditMode ? `/story-detail/${savedStoryId}` : "/timeline");
+
     } catch (err) {
       console.error("Error saving story:", err);
-      const errorMessage =
-        err.response?.data?.message || err.message || "Failed to save story";
-      setError(errorMessage);
+      setError(err.response?.data?.message || "Failed to save story");
     } finally {
       setLoading(false);
     }
   };
 
-  const getMediaIcon = (type) => {
-    if (type.startsWith("image/")) return <Image />;
-    if (type.startsWith("video/")) return <VideoLibrary />;
-    if (type.startsWith("audio/")) return <AudioFile />;
-    return <CloudUpload />;
-  };
-
   if (initialLoading) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: "#faf6f1",
-      }}
-    >
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "#faf6f1" }}>
       {/* Top Bar */}
-      <Box
-        sx={{
-          p: 2,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          bgcolor: "white",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
-        }}
-      >
+      <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.08)" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
           <Tooltip title="Go back">
-            <IconButton
-              onClick={() =>
-                navigate(isEditMode ? `/story-detail/${storyId}` : "/timeline")
-              }
-              disabled={loading}
-            >
+            <IconButton onClick={() => navigate(isEditMode ? `/story-detail/${storyId}` : "/timeline")} disabled={loading}>
               <ArrowBack />
             </IconButton>
           </Tooltip>
@@ -251,43 +180,17 @@ const StoryEditor = () => {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<Cancel />}
-            onClick={() =>
-              navigate(isEditMode ? `/story-detail/${storyId}` : "/timeline")
-            }
-            disabled={loading}
-            sx={{ borderRadius: 2, textTransform: "none" }}
-          >
+          <Button variant="outlined" color="error" startIcon={<Cancel />} onClick={() => navigate(isEditMode ? `/story-detail/${storyId}` : "/timeline")} disabled={loading} sx={{ borderRadius: 2, textTransform: "none" }}>
             Cancel
           </Button>
-          <Button
-            variant="contained"
-            startIcon={loading ? <CircularProgress size={18} /> : <Save />}
-            onClick={handleSave}
-            disabled={loading}
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              bgcolor: "orange",
-              "&:hover": { bgcolor: "#e69500" },
-              minWidth: 140,
-            }}
-          >
+          <Button variant="contained" startIcon={loading ? <CircularProgress size={18} /> : <Save />} onClick={handleSave} disabled={loading} sx={{ borderRadius: 2, textTransform: "none", bgcolor: "orange", "&:hover": { bgcolor: "#e69500" }, minWidth: 140 }}>
             {loading ? "Saving..." : isEditMode ? "Update Story" : "Save Story"}
           </Button>
         </Stack>
       </Box>
 
-      {/* Error Alert */}
       {error && (
-        <Alert
-          severity="error"
-          onClose={() => setError("")}
-          sx={{ m: 2, borderRadius: 2 }}
-        >
+        <Alert severity="error" onClose={() => setError("")} sx={{ m: 2, borderRadius: 2 }}>
           {error}
         </Alert>
       )}
@@ -295,128 +198,35 @@ const StoryEditor = () => {
       {/* Middle Content */}
       <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
         {/* Left Panel */}
-        <Box
-          sx={{
-            flex: 2,
-            display: "flex",
-            flexDirection: "column",
-            borderRight: "1px solid",
-            borderColor: "divider",
-            bgcolor: "white",
-          }}
-        >
-          {/* Title + Date */}
+        <Box sx={{ flex: 2, display: "flex", flexDirection: "column", borderRight: "1px solid", borderColor: "divider", bgcolor: "white" }}>
           <Box sx={{ p: 2, display: "flex", gap: 2 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Give your story a title..."
-              InputProps={{
-                sx: {
-                  fontSize: "1.6rem",
-                  fontWeight: 700,
-                  borderRadius: 2,
-                  bgcolor: "#fdfdfd",
-                },
-              }}
-            />
-            <TextField
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              sx={{
-                minWidth: 160,
-                borderRadius: 2,
-                bgcolor: "#fdfdfd",
-              }}
-            />
+            <TextField fullWidth variant="outlined" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Give your story a title..." InputProps={{ sx: { fontSize: "1.6rem", fontWeight: 700, borderRadius: 2, bgcolor: "#fdfdfd" } }} />
+            <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} sx={{ minWidth: 160, borderRadius: 2, bgcolor: "#fdfdfd" }} />
           </Box>
-
-          {/* Toolbar */}
-          <Box
-            sx={{
-              px: 2,
-              py: 1,
-              borderTop: "1px solid",
-              borderBottom: "1px solid",
-              borderColor: "divider",
-              display: "flex",
-              gap: 1,
-              bgcolor: "#f9f9f9",
-              alignItems: "center",
-            }}
-          >
-            <Tooltip title="Bold">
-              <IconButton>
-                <FormatBold />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Italic">
-              <IconButton>
-                <FormatItalic />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Bullet List">
-              <IconButton>
-                <FormatListBulleted />
-              </IconButton>
-            </Tooltip>
+          <Box sx={{ px: 2, py: 1, borderTop: "1px solid", borderBottom: "1px solid", borderColor: "divider", display: "flex", gap: 1, bgcolor: "#f9f9f9", alignItems: "center" }}>
+            <Tooltip title="Bold"><IconButton><FormatBold /></IconButton></Tooltip>
+            <Tooltip title="Italic"><IconButton><FormatItalic /></IconButton></Tooltip>
+            <Tooltip title="Bullet List"><IconButton><FormatListBulleted /></IconButton></Tooltip>
             <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
-            <Typography variant="caption" color="text.secondary">
-              {content.length} characters
-            </Typography>
+            <Typography variant="caption" color="text.secondary">{content.length} characters</Typography>
           </Box>
-
-          {/* Content Area */}
           <Box sx={{ flex: 1, overflow: "auto", p: 2 }}>
-            <TextField
-              fullWidth
-              multiline
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Start writing your story here..."
-              minRows={18}
-              sx={{
-                "& .MuiInputBase-input": {
-                  fontSize: "1rem",
-                  fontFamily: "Georgia, serif",
-                  lineHeight: 1.6,
-                },
-                "& fieldset": { border: "none" },
-              }}
-            />
+            <TextField fullWidth multiline value={content} onChange={(e) => setContent(e.target.value)} placeholder="Start writing your story here..." minRows={18} sx={{ "& .MuiInputBase-input": { fontSize: "1rem", fontFamily: "Georgia, serif", lineHeight: 1.6 }, "& fieldset": { border: "none" } }} />
           </Box>
         </Box>
 
         {/* Right Panel */}
-        <Box
-          sx={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            bgcolor: "white",
-            overflow: "hidden",
-          }}
-        >
-          {/* Tags */}
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", bgcolor: "white", overflow: "hidden" }}>
+          {/* Tags Section */}
           <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              color="text.primary"
-            >
-              🏷️ Tags
-            </Typography>
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">🏷️ Tags</Typography>
             <TextField
               fullWidth
               size="small"
               placeholder="Add tag and press Enter"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   handleAddTag();
@@ -437,43 +247,17 @@ const StoryEditor = () => {
               ))}
             </Stack>
           </Box>
-
+          
           {/* Existing Media (Edit Mode) */}
           {isEditMode && existingMedia.length > 0 && (
-            <Box
-              sx={{
-                p: 2,
-                borderBottom: "1px solid",
-                borderColor: "divider",
-                maxHeight: "30%",
-                overflow: "auto",
-              }}
-            >
-              <Typography
-                variant="subtitle1"
-                fontWeight={600}
-                gutterBottom
-                color="text.primary"
-              >
-                📎 Existing Media
-              </Typography>
+            <Box sx={{ p: 2, borderBottom: "1px solid", borderColor: "divider", maxHeight: "30%", overflow: "auto" }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">📎 Existing Media</Typography>
               <Grid container spacing={2}>
                 {existingMedia.map((media, index) => (
                   <Grid item xs={6} key={index}>
-                    <Card
-                      sx={{
-                        borderRadius: 2,
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                      }}
-                    >
-                      {(media.type === "image" ||
-                        media.mimeType?.startsWith("image/")) && (
-                        <CardMedia
-                          component="img"
-                          height="100"
-                          image={media.url || media.fileUrl}
-                          alt={media.description || "Story media"}
-                        />
+                    <Card sx={{ borderRadius: 2, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+                      {(media.mediaType === "photo") && (
+                        <CardMedia component="img" height="100" image={media.fileUrl} alt={media.description} />
                       )}
                     </Card>
                   </Grid>
@@ -482,92 +266,25 @@ const StoryEditor = () => {
             </Box>
           )}
 
-          {/* Media */}
+          {/* Media Upload Section */}
           <Box sx={{ flex: 1, p: 2, overflow: "auto" }}>
-            <Typography
-              variant="subtitle1"
-              fontWeight={600}
-              gutterBottom
-              color="text.primary"
-            >
-              🖼️ {isEditMode ? "Add New Media" : "Media"}
-            </Typography>
-            <Box
-              sx={{
-                border: "2px dashed #ccc",
-                borderRadius: 3,
-                p: 3,
-                textAlign: "center",
-                bgcolor: "#fafafa",
-                cursor: "pointer",
-                transition: "all 0.3s",
-                "&:hover": {
-                  borderColor: "orange",
-                  bgcolor: "#fff8f0",
-                },
-              }}
-            >
-              <input
-                accept="image/*,video/*,audio/*"
-                style={{ display: "none" }}
-                id="media-upload"
-                multiple
-                type="file"
-                onChange={handleFileUpload}
-              />
+            <Typography variant="subtitle1" fontWeight={600} gutterBottom color="text.primary">🖼️ {isEditMode ? "Add New Media" : "Media"}</Typography>
+            <Box sx={{ border: "2px dashed #ccc", borderRadius: 3, p: 3, textAlign: "center", bgcolor: "#fafafa", cursor: "pointer", transition: "all 0.3s", "&:hover": { borderColor: "orange", bgcolor: "#fff8f0" } }}>
+              <input accept="image/*,video/*,audio/*" style={{ display: "none" }} id="media-upload" multiple type="file" onChange={handleFileUpload} />
               <label htmlFor="media-upload" style={{ cursor: "pointer" }}>
                 <CloudUpload sx={{ fontSize: 40, color: "orange", mb: 1 }} />
-                <Typography
-                  variant="body2"
-                  fontWeight={600}
-                  color="text.secondary"
-                >
-                  Upload Photos, Videos, or Audio
-                </Typography>
+                <Typography variant="body2" fontWeight={600} color="text.secondary">Upload Photos, Videos, or Audio</Typography>
               </label>
             </Box>
             {uploadedMedia.length > 0 && (
               <Grid container spacing={2} mt={2}>
                 {uploadedMedia.map((media) => (
                   <Grid item xs={6} key={media.id}>
-                    <Card
-                      sx={{
-                        position: "relative",
-                        borderRadius: 2,
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                      }}
-                    >
-                      {media.type.startsWith("image/") && (
-                        <CardMedia
-                          component="img"
-                          height="120"
-                          image={media.url}
-                          alt={media.name}
-                        />
-                      )}
-                      {media.type.startsWith("video/") && (
-                        <CardMedia
-                          component="video"
-                          height="120"
-                          src={media.url}
-                          controls
-                        />
-                      )}
-                      {media.type.startsWith("audio/") && (
-                        <Box sx={{ p: 2 }}>🎵 {media.name}</Box>
-                      )}
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveMedia(media.id)}
-                        sx={{
-                          position: "absolute",
-                          top: 6,
-                          right: 6,
-                          bgcolor: "rgba(0,0,0,0.6)",
-                          color: "white",
-                          "&:hover": { bgcolor: "error.main" },
-                        }}
-                      >
+                    <Card sx={{ position: "relative", borderRadius: 2, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
+                      {media.type.startsWith("image/") && <CardMedia component="img" height="120" image={media.url} alt={media.name} />}
+                      {media.type.startsWith("video/") && <CardMedia component="video" height="120" src={media.url} controls />}
+                      {media.type.startsWith("audio/") && <Box sx={{ p: 2 }}>🎵 {media.name}</Box>}
+                      <IconButton size="small" onClick={() => handleRemoveMedia(media.id)} sx={{ position: "absolute", top: 6, right: 6, bgcolor: "rgba(0,0,0,0.6)", color: "white", "&:hover": { bgcolor: "error.main" } }}>
                         <Close fontSize="small" />
                       </IconButton>
                     </Card>
