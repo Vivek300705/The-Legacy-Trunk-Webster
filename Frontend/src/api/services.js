@@ -214,7 +214,19 @@ export const getFamilyTreeData = async (circleId) => {
   return response.data;
 };
 
+export const exportStoriesPDF = async () => {
+  const response = await api.get('/export/stories/pdf', {
+    responseType: 'blob', // Important: tells axios to expect a file blob
+  });
+  return response.data;
+};
+
 export const getRandomPrompt = async () => {
   const response = await api.get('/prompts/random');
+  return response.data;
+};
+
+export const getUniqueTags = async () => {
+  const response = await api.get('/stories/tags/unique');
   return response.data;
 };

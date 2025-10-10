@@ -311,3 +311,33 @@ export const deleteStory = async (req, res) => {
       .json({ message: "Error deleting story", error: error.message });
   }
 };
+// Get unique tags for the family circle
+export const getUniqueTagsForFamily = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user.familyCircle) {
+      return res.status(200).json([]); // No family, no tags
+    }
+
+    const uniqueTags = await Story.aggregate([
+      // 1. Find all stories in the user's family circle
+      { $match: { familyCircle: user.familyCircle } },
+      
+      // 2. Unwind the tags array (creates a doc for each tag)
+      { $unwind: '$tags' },
+
+      // 3. Group by the tag name to get unique tags
+      { $group: { _id: '$tags' } },
+      
+      // 4. Sort the tags alphabetically
+      { $sort: { _id: 1 } },
+
+      // 5. Reshape the output
+      { $project: { _id: 0, tag: '$_id' } }
+    ]);
+
+    res.status(200).json(uniqueTags.map(t => t.tag)); // Send back an array of strings
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching tags', error });
+  }
+};

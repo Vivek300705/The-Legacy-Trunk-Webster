@@ -7,6 +7,7 @@ import {
   getUserStories,
   getFamilyCircleStories,
   getStoryById,
+  getUniqueTagsForFamily
 } from "../controllers/storyController.js";
 import authMiddleware from "../middlewares/authMiddleware.js";
 
@@ -38,5 +39,7 @@ router.patch("/:storyId", updateStory);
 
 // Delete a specific story
 router.delete("/:storyId", deleteStory);
+
+router.get('/tags/unique', authMiddleware, getUniqueTagsForFamily);
 
 export default router;
