@@ -45,6 +45,8 @@ app.use(
       "https://the-legacy-trunk-webster-4oyf.vercel.app", // ✅ Alternative Vercel URL
       "http://localhost:5173", // ✅ Vite dev server
       "http://localhost:3000",
+      "https://the-legacy-trunk-webster-eta.vercel.app/signup",
+      "https://the-legacy-trunk-webster-5t4f.onrender.com/api"
     ],
     credentials: true,
   })
