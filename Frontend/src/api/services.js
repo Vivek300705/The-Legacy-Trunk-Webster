@@ -99,14 +99,6 @@ export const deleteFamilyCircle = async (circleId) => {
   return response.data;
 };
 
-<<<<<<< HEAD
-export const getFamilyTreeData = async (circleId) => {
-  const response = await api.get(`/family-circles/${circleId}/tree`);
-  return response.data;
-};
-
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 // =================== RELATIONSHIPS ===================
 export const sendRelationshipRequest = async (
   recipientId,
@@ -125,13 +117,9 @@ export const getPendingRequests = async () => {
 };
 
 export const respondToRequest = async (requestId, action) => {
-<<<<<<< HEAD
-  const response = await api.put(`/relationships/${requestId}`, { action });
-=======
   const response = await api.put(`/relationships/${requestId}`, {
     action, // should be 'approved' or 'rejected'
   });
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   return response.data;
 };
 
@@ -158,10 +146,7 @@ export const createStory = async (storyData) => {
   return response.data;
 };
 
-<<<<<<< HEAD
-=======
 // ✅ FIXED: Now accepts familyId parameter to match the route
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 export const getStoriesForFamily = async (familyId) => {
   const response = await api.get(`/stories/family/${familyId}`);
   return response.data;
@@ -182,19 +167,13 @@ export const getStoryById = async (storyId) => {
   return response.data;
 };
 
-<<<<<<< HEAD
-=======
 // ✅ Matches route: GET /stories/user
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 export const getUserOwnStories = async (limit = 10, skip = 0) => {
   const response = await api.get(`/stories/user?limit=${limit}&skip=${skip}`);
   return response.data;
 };
 
-<<<<<<< HEAD
-=======
 // ✅ Matches route: GET /stories/family-circle
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 export const getFamilyCircleStories = async (limit = 20, skip = 0) => {
   const response = await api.get(
     `/stories/family-circle?limit=${limit}&skip=${skip}`
@@ -202,25 +181,6 @@ export const getFamilyCircleStories = async (limit = 20, skip = 0) => {
   return response.data;
 };
 
-<<<<<<< HEAD
-// AI Analysis
-export const getStoryWithAnalysis = async (storyId) => {
-  const response = await api.get(`/stories/${storyId}/analysis`);
-  return response.data;
-};
-
-export const triggerAIAnalysis = async (storyId) => {
-  const response = await api.post(`/stories/${storyId}/analyze`);
-  return response.data;
-};
-
-export const getAnalysisStatus = async (storyId) => {
-  const response = await api.get(`/stories/${storyId}`);
-  return response.data.analysis;
-};
-
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 // =================== MEDIA ===================
 export const uploadMedia = async (storyId, file, description = "") => {
   const formData = new FormData();
@@ -228,79 +188,22 @@ export const uploadMedia = async (storyId, file, description = "") => {
   formData.append("description", description);
 
   const response = await api.post(`/media/upload/${storyId}`, formData, {
-<<<<<<< HEAD
-    headers: { "Content-Type": "multipart/form-data" },
-=======
     headers: {
       "Content-Type": "multipart/form-data",
     },
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   });
   return response.data;
 };
 
-<<<<<<< HEAD
-// =================== SEARCH ===================
-export const searchContent = async (query = "", filters = {}) => {
-  const params = new URLSearchParams();
-
-  if (query && query.trim()) params.append("q", query.trim());
-=======
 
 export const searchContent = async (query, filters = {}) => {
   const params = new URLSearchParams();
   params.append("q", query);
 
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   if (filters.type) params.append("type", filters.type);
   if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
   if (filters.dateTo) params.append("dateTo", filters.dateTo);
 
-<<<<<<< HEAD
-  const queryString = params.toString();
-  const url = queryString ? `/search?${queryString}` : `/search`;
-
-  console.log("🔍 Searching with params:", queryString);
-
-  const response = await api.get(url);
-  return response.data;
-};
-
-export const searchStoriesByTags = async (filters) => {
-  const params = new URLSearchParams(filters).toString();
-  const response = await api.get(`/stories/search-by-tags?${params}`);
-  return response.data;
-};
-
-export const getAllTags = async () => {
-  const response = await api.get("/stories/tags");
-  return response.data;
-};
-
-// =================== PROMPTS ===================
-export const getRandomPrompt = async () => {
-  const response = await api.get("/prompts/random");
-  return response.data;
-};
-export const getStoryAnalysis = async (storyId) => {
-  const response = await api.get(`/analysis/story/${storyId}`);
-  return response.data;
-};
-
-export const triggerStoryAnalysis = async (storyId) => {
-  const response = await api.post(`/analysis/story/${storyId}/analyze`);
-  return response.data;
-};
-
-export const getAllAITags = async () => {
-  const response = await api.get("/analysis/tags/all");
-  return response.data;
-};
-
-export const searchStoriesByAITags = async (filters) => {
-  const params = new URLSearchParams(filters).toString();
-  const response = await api.get(`/analysis/search?${params}`);
-=======
   const response = await api.get(`/search?${params.toString()}`);
   return response.data;
 };
@@ -325,6 +228,5 @@ export const getRandomPrompt = async () => {
 
 export const getUniqueTags = async () => {
   const response = await api.get('/stories/tags/unique');
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   return response.data;
 };

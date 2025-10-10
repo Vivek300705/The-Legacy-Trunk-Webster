@@ -4,11 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-<<<<<<< HEAD
-    "start": "vite",
-=======
     "start": "vite --force",
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

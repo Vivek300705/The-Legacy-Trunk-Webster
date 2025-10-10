@@ -14,11 +14,6 @@ import {
   MenuItem,
   Avatar,
   Divider,
-<<<<<<< HEAD
-  Button,
-  Collapse,
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 } from "@mui/material";
 import {
   Person,
@@ -27,23 +22,8 @@ import {
   MoreVert,
   Edit,
   Delete,
-<<<<<<< HEAD
-  AutoAwesome,
-  ExpandMore,
-  ExpandLess,
-  Refresh,
-  CheckCircle,
-} from "@mui/icons-material";
-import {
-  getStoryById,
-  deleteStory,
-  getStoryAnalysis,
-  triggerStoryAnalysis,
-} from "../api/services";
-=======
 } from "@mui/icons-material";
 import { getStoryById, deleteStory } from "../api/services";
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 const StoryDetail = () => {
   const { storyId } = useParams();
@@ -53,24 +33,8 @@ const StoryDetail = () => {
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
 
-<<<<<<< HEAD
-  // AI Analysis states
-  const [analysis, setAnalysis] = useState(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisError, setAnalysisError] = useState(null);
-  const [analysisExpanded, setAnalysisExpanded] = useState(true);
-  const [pollAttempt, setPollAttempt] = useState(0);
-  const [pollMessage, setPollMessage] = useState("");
-
-  useEffect(() => {
-    if (storyId) {
-      fetchStory();
-      fetchAnalysis();
-    }
-=======
   useEffect(() => {
     fetchStory();
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }, [storyId]);
 
   const fetchStory = async () => {
@@ -78,120 +42,16 @@ const StoryDetail = () => {
       setLoading(true);
       setError(null);
       const data = await getStoryById(storyId);
-<<<<<<< HEAD
-      console.log("✅ Story fetched:", data);
-      setStory(data);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load story");
-      console.error("❌ Error fetching story:", err);
-=======
       console.log("Story fetched:", data);
       setStory(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load story");
       console.error("Error fetching story:", err);
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     } finally {
       setLoading(false);
     }
   };
 
-<<<<<<< HEAD
-  const fetchAnalysis = async () => {
-    try {
-      console.log("🔍 Fetching analysis for story:", storyId);
-      const data = await getStoryAnalysis(storyId);
-      console.log("✅ Analysis fetched:", data);
-
-      if (data && (data.themes?.length > 0 || data.emotions?.length > 0)) {
-        setAnalysis(data);
-        console.log("✅ Analysis data set:", data);
-      }
-    } catch (err) {
-      console.log("ℹ️ No analysis found yet:", err.response?.status);
-      // Don't set error for 404 - it just means no analysis exists yet
-      if (err.response?.status !== 404) {
-        console.error("❌ Error fetching analysis:", err);
-      }
-    }
-  };
-
-  const handleTriggerAnalysis = async () => {
-    try {
-      setAnalysisLoading(true);
-      setAnalysisError(null);
-      setPollAttempt(0);
-      setPollMessage("Sending story to AI...");
-      console.log("🚀 Triggering analysis for story:", storyId);
-
-      const result = await triggerStoryAnalysis(storyId);
-      console.log("✅ Analysis triggered:", result);
-      setPollMessage("AI is analyzing your story...");
-
-      // Start polling for results
-      let attempts = 0;
-      const maxAttempts = 30; // Poll for up to 60 seconds (30 * 2s)
-
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        setPollAttempt(attempts);
-        setPollMessage(`Checking results (${attempts}/${maxAttempts})...`);
-        console.log(`🔄 Poll attempt ${attempts}/${maxAttempts}`);
-
-        try {
-          const data = await getStoryAnalysis(storyId);
-          console.log("📊 Poll result:", data);
-
-          // Check if we have actual analysis data
-          if (data && (data.themes?.length > 0 || data.emotions?.length > 0)) {
-            console.log("✅ Analysis completed! Setting data...");
-            setPollMessage("Analysis complete! 🎉");
-            setAnalysis(data);
-            setAnalysisLoading(false);
-            setAnalysisExpanded(true);
-            clearInterval(pollInterval);
-
-            // Clear poll message after 2 seconds
-            setTimeout(() => {
-              setPollMessage("");
-              setPollAttempt(0);
-            }, 2000);
-          } else if (attempts >= maxAttempts) {
-            console.log("⏱️ Polling timeout");
-            setAnalysisError(
-              "Analysis is taking longer than expected. Please refresh the page."
-            );
-            setAnalysisLoading(false);
-            setPollMessage("");
-            clearInterval(pollInterval);
-          }
-        } catch (err) {
-          console.log(
-            `⚠️ Poll attempt ${attempts} failed:`,
-            err.response?.status
-          );
-          if (attempts >= maxAttempts) {
-            setAnalysisError(
-              "Failed to fetch analysis results. Please try again."
-            );
-            setAnalysisLoading(false);
-            setPollMessage("");
-            clearInterval(pollInterval);
-          }
-        }
-      }, 2000); // Poll every 2 seconds
-    } catch (err) {
-      console.error("❌ Error triggering analysis:", err);
-      setAnalysisError(
-        err.response?.data?.message || "Failed to analyze story"
-      );
-      setAnalysisLoading(false);
-      setPollMessage("");
-    }
-  };
-
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -202,10 +62,7 @@ const StoryDetail = () => {
 
   const handleEdit = () => {
     handleMenuClose();
-<<<<<<< HEAD
-=======
     console.log("Navigating to edit story:", storyId);
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     navigate(`/story-editor?id=${storyId}`);
   };
 
@@ -281,17 +138,6 @@ const StoryDetail = () => {
         m.mediaType === "audio"
     ) || [];
 
-<<<<<<< HEAD
-  // Check if we have analysis data to display
-  const hasAnalysisData =
-    analysis &&
-    ((analysis.themes && analysis.themes.length > 0) ||
-      (analysis.emotions && analysis.emotions.length > 0) ||
-      (analysis.timePeriod && analysis.timePeriod !== "unknown") ||
-      (analysis.lifeStage && analysis.lifeStage !== "unknown"));
-
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#FAFAFA", py: 3 }}>
       <Container maxWidth="sm" sx={{ px: { xs: 0, sm: 2 } }}>
@@ -362,11 +208,7 @@ const StoryDetail = () => {
             </Menu>
           </Box>
 
-<<<<<<< HEAD
-          {/* Images */}
-=======
           {/* Images - Instagram Carousel Style */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
           {images.length > 0 && (
             <Box
               sx={{
@@ -398,8 +240,6 @@ const StoryDetail = () => {
                   />
                 </Box>
               ))}
-<<<<<<< HEAD
-=======
               {images.length > 1 && (
                 <Box
                   sx={{
@@ -417,7 +257,6 @@ const StoryDetail = () => {
                   1/{images.length}
                 </Box>
               )}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             </Box>
           )}
 
@@ -442,10 +281,7 @@ const StoryDetail = () => {
 
           {/* Content Section */}
           <Box sx={{ p: 2 }}>
-<<<<<<< HEAD
-=======
             {/* Title */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             <Typography
               variant="h6"
               sx={{
@@ -457,10 +293,7 @@ const StoryDetail = () => {
               {story.title}
             </Typography>
 
-<<<<<<< HEAD
-=======
             {/* Content */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             <Box sx={{ mb: 2 }}>
               {story.content.split("\n\n").map((paragraph, index) => (
                 <Typography
@@ -477,10 +310,7 @@ const StoryDetail = () => {
               ))}
             </Box>
 
-<<<<<<< HEAD
-=======
             {/* Tags */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             {story.tags && story.tags.length > 0 && (
               <Stack
                 direction="row"
@@ -508,10 +338,7 @@ const StoryDetail = () => {
               </Stack>
             )}
 
-<<<<<<< HEAD
-=======
             {/* Audio Files */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             {audio.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Divider sx={{ mb: 2 }} />
@@ -534,8 +361,6 @@ const StoryDetail = () => {
                           type={item.mimeType || "audio/mpeg"}
                         />
                       </audio>
-<<<<<<< HEAD
-=======
                       {(item.caption || item.description) && (
                         <Typography
                           variant="caption"
@@ -550,7 +375,6 @@ const StoryDetail = () => {
                           {item.caption || item.description}
                         </Typography>
                       )}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                     </Box>
                   ))}
                 </Stack>
@@ -559,344 +383,7 @@ const StoryDetail = () => {
           </Box>
         </Paper>
 
-<<<<<<< HEAD
-        {/* AI Analysis Section */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: { xs: 0, sm: 3 },
-            border: { xs: "none", sm: "1px solid #DBDBDB" },
-            backgroundColor: "white",
-            mb: 3,
-            overflow: "hidden",
-          }}
-        >
-          {/* Header */}
-          <Box
-            sx={{
-              p: 2,
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              cursor: "pointer",
-            }}
-            onClick={() => setAnalysisExpanded(!analysisExpanded)}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <AutoAwesome sx={{ color: "white" }} />
-              <Typography variant="subtitle1" fontWeight={600} color="white">
-                AI Story Analysis
-              </Typography>
-              {hasAnalysisData && (
-                <Chip
-                  icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                  label="Analyzed"
-                  size="small"
-                  sx={{
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    color: "white",
-                    borderRadius: "12px",
-                    height: 24,
-                    fontSize: "0.75rem",
-                  }}
-                />
-              )}
-            </Box>
-            <IconButton size="small" sx={{ color: "white" }}>
-              {analysisExpanded ? <ExpandLess /> : <ExpandMore />}
-            </IconButton>
-          </Box>
-
-          <Collapse in={analysisExpanded}>
-            <Box sx={{ p: 2 }}>
-              {analysisError && (
-                <Alert
-                  severity="error"
-                  sx={{ mb: 2 }}
-                  onClose={() => setAnalysisError(null)}
-                >
-                  {analysisError}
-                </Alert>
-              )}
-
-              {!hasAnalysisData && !analysisLoading && (
-                <Box sx={{ textAlign: "center", py: 3 }}>
-                  <AutoAwesome sx={{ fontSize: 48, color: "#667eea", mb: 2 }} />
-                  <Typography variant="body1" gutterBottom fontWeight={600}>
-                    Get AI-powered insights about this story
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 3 }}
-                  >
-                    Discover themes, emotions, time periods, and more
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<AutoAwesome />}
-                    onClick={handleTriggerAnalysis}
-                    sx={{
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      textTransform: "none",
-                      px: 4,
-                      py: 1.5,
-                    }}
-                  >
-                    Analyze Story with AI
-                  </Button>
-                </Box>
-              )}
-
-              {analysisLoading && (
-                <Box sx={{ textAlign: "center", py: 4 }}>
-                  <CircularProgress
-                    size={48}
-                    sx={{ color: "#667eea" }}
-                    variant={pollAttempt > 0 ? "determinate" : "indeterminate"}
-                    value={pollAttempt > 0 ? (pollAttempt / 30) * 100 : 0}
-                  />
-                  <Typography
-                    variant="body2"
-                    fontWeight={600}
-                    sx={{ mt: 2, color: "#667eea" }}
-                  >
-                    {pollMessage || "AI is analyzing your story..."}
-                  </Typography>
-                  {pollAttempt > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: 8,
-                          backgroundColor: "#f0f0f0",
-                          borderRadius: 4,
-                          overflow: "hidden",
-                          mb: 1,
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: `${(pollAttempt / 30) * 100}%`,
-                            height: "100%",
-                            background:
-                              "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
-                            transition: "width 0.3s ease",
-                          }}
-                        />
-                      </Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {pollAttempt} of 30 checks completed
-                      </Typography>
-                    </Box>
-                  )}
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 2 }}
-                  >
-                    💡 Analyzing text, themes, emotions, and time period...
-                  </Typography>
-                </Box>
-              )}
-
-              {hasAnalysisData && (
-                <Box>
-                  <Alert
-                    severity="success"
-                    icon={<CheckCircle />}
-                    sx={{ mb: 2 }}
-                  >
-                    <Typography variant="body2" fontWeight={600}>
-                      Analysis Complete!
-                    </Typography>
-                    <Typography variant="caption">
-                      AI has analyzed your story and extracted the following
-                      insights:
-                    </Typography>
-                  </Alert>
-
-                  {/* Themes */}
-                  {analysis.themes && analysis.themes.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        🎯 Themes
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        {analysis.themes.map((theme, idx) => (
-                          <Chip
-                            key={idx}
-                            label={theme}
-                            size="medium"
-                            sx={{
-                              backgroundColor: "#e3f2fd",
-                              color: "#1976d2",
-                              fontWeight: 500,
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  {/* Emotions */}
-                  {analysis.emotions && analysis.emotions.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        💖 Emotions
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        {analysis.emotions.map((emotion, idx) => (
-                          <Chip
-                            key={idx}
-                            label={emotion}
-                            size="medium"
-                            sx={{
-                              backgroundColor: "#fce4ec",
-                              color: "#c2185b",
-                              fontWeight: 500,
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  {/* Time Period */}
-                  {analysis.timePeriod && analysis.timePeriod !== "unknown" && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        📅 Time Period
-                      </Typography>
-                      <Chip
-                        label={analysis.timePeriod}
-                        size="medium"
-                        sx={{
-                          backgroundColor: "#fff3e0",
-                          color: "#e65100",
-                          fontWeight: 500,
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  {/* Life Stage */}
-                  {analysis.lifeStage && analysis.lifeStage !== "unknown" && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        👤 Life Stage
-                      </Typography>
-                      <Chip
-                        label={analysis.lifeStage}
-                        size="medium"
-                        sx={{
-                          backgroundColor: "#f3e5f5",
-                          color: "#7b1fa2",
-                          fontWeight: 500,
-                        }}
-                      />
-                    </Box>
-                  )}
-
-                  {/* Locations */}
-                  {analysis.locations && analysis.locations.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        📍 Locations
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        {analysis.locations.map((location, idx) => (
-                          <Chip
-                            key={idx}
-                            label={location}
-                            size="medium"
-                            sx={{
-                              backgroundColor: "#e8f5e9",
-                              color: "#2e7d32",
-                              fontWeight: 500,
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={
-                      analysisLoading ? (
-                        <CircularProgress size={16} />
-                      ) : (
-                        <Refresh />
-                      )
-                    }
-                    onClick={handleTriggerAnalysis}
-                    disabled={analysisLoading}
-                    sx={{ textTransform: "none" }}
-                  >
-                    {analysisLoading ? "Re-analyzing..." : "Re-analyze with AI"}
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          </Collapse>
-        </Paper>
-
-        {/* Additional Images */}
-=======
         {/* Additional Images (if more than 1) */}
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
         {images.length > 1 && (
           <Paper
             elevation={0}

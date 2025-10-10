@@ -16,12 +16,8 @@ import {
 } from "@mui/material";
 import { Person, CalendarToday, Label, Add } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-<<<<<<< HEAD
-import { getFamilyCircleStories } from "../api/services";
-=======
 // 👇 1. Import the new API service function
 import { getFamilyCircleStories, getUniqueTags } from "../api/services";
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 const Timeline = () => {
   const navigate = useNavigate();

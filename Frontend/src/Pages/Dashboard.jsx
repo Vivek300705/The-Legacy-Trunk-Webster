@@ -17,21 +17,14 @@ import {
   AutoStories,
   Timeline,
   FamilyRestroom,
-<<<<<<< HEAD
-=======
   Download, // 👈 1. Import the Download icon
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import api from "../api/axiosConfig";
 import { setMongoUser } from "../store/slice/authSlice";
-<<<<<<< HEAD
-import MemoryPrompt from '../components/MemoryPrompt'; // 👈 1. Import the new component
-=======
 import MemoryPrompt from '../components/MemoryPrompt';
 import { exportStoriesPDF } from "../api/services"; // 👈 2. Import the new API service
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -43,8 +36,6 @@ const Dashboard = () => {
   const [recentStories, setRecentStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-<<<<<<< HEAD
-=======
   
   // 👇 3. Add state for the download button
   const [isDownloading, setIsDownloading] = useState(false);
@@ -70,7 +61,6 @@ const Dashboard = () => {
     }
   };
 
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -93,11 +83,7 @@ const Dashboard = () => {
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-<<<<<<< HEAD
-        // setError("Failed to load dashboard data");
-=======
         setError("Failed to load dashboard data");
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
       } finally {
         setLoading(false);
       }
@@ -154,10 +140,6 @@ const Dashboard = () => {
         </Alert>
       )}
 
-<<<<<<< HEAD
-      {/* Header */}
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" sx={{ mb: 1, fontWeight: 700 }}>
           Welcome back, {mongoUser?.name || "Friend"}!
@@ -167,15 +149,8 @@ const Dashboard = () => {
         </Typography>
       </Box>
 
-<<<<<<< HEAD
-      {/* 👇 2. Add the MemoryPrompt component here */}
       <MemoryPrompt />
 
-      {/* Quick Actions */}
-=======
-      <MemoryPrompt />
-
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
       <Box sx={{ mb: 6 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
           Quick Actions
@@ -235,12 +210,6 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-<<<<<<< HEAD
-      {/* Family Circle Section (and the rest of your page) */}
-      {/* ... The rest of your existing Dashboard.jsx code remains unchanged ... */}
-      <Box sx={{ mb: 6 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-=======
       <Box sx={{ mb: 6 }}>
         <Box
           sx={{
@@ -252,22 +221,10 @@ const Dashboard = () => {
             mb: 3,
           }}
         >
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
             Your Family Circle
           </Typography>
           {!isNewUser && familyCircle?._id && (
-<<<<<<< HEAD
-            <Button
-              variant="outlined"
-              startIcon={<Group />}
-              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
-            >
-              Manage Circle
-            </Button>
-          )}
-        </Box>
-=======
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
@@ -289,7 +246,6 @@ const Dashboard = () => {
           )}
         </Box>
 
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
         {isNewUser ? (
           <Card sx={{ py: 8, textAlign: "center", bgcolor: "background.paper" }}>
             <CardContent>
@@ -339,10 +295,6 @@ const Dashboard = () => {
           </Card>
         )}
       </Box>
-<<<<<<< HEAD
-=======
-
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
       {!isNewUser && recentStories.length > 0 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
@@ -386,10 +338,7 @@ const Dashboard = () => {
           </Box>
         </Box>
       )}
-<<<<<<< HEAD
-=======
       
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     </Container>
   );
 };

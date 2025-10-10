@@ -18,13 +18,7 @@ import userRoutes from "./src/routes/userRoutes.js";
 import mediaRoutes from "./src/routes/mediaRoutes.js"; // ✅ Add this import
 import searchRoutes from "./src/routes/searchRoutes.js";
 import promptRoutes from './src/routes/promptRoutes.js';
-<<<<<<< HEAD
-import storyAnalysisQueue from "./src/services/queueService.js";
-import analysisRoutes from "./src/routes/analysisRoutes.js";
-
-=======
 import exportRoutes from './src/routes/exportRoutes.js';
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 // Import your service account key for Firebase using createRequire
 const require = createRequire(import.meta.url);
 const serviceAccount = {
@@ -56,10 +50,6 @@ app.use(
   })
 );
 app.use(express.json()); // To parse JSON request bodies
-<<<<<<< HEAD
-app.use("/api/analysis", analysisRoutes);
-=======
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
@@ -84,15 +74,6 @@ app.use("/api/relationships", relationshipRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/media", mediaRoutes); // ✅ Add this line
 app.use("/api/search", searchRoutes); // ✅ Add search routes
-<<<<<<< HEAD
-app.use("/api/analysis", analysisRoutes);
-app.use("/api/prompts", promptRoutes);
-// app.get('/api/prompts/random', (req, res) => {
-//   console.log('--- /api/prompts/random TEST ROUTE WAS HIT! ---');
-//   res.json({ question: 'This is a successful test from index.js' });
-// });
-// Health check endpoint
-=======
 app.use("/api/prompts", promptRoutes);
 // app.get('/api/prompts/random', (req, res) => {
   //   console.log('--- /api/prompts/random TEST ROUTE WAS HIT! ---');
@@ -100,7 +81,6 @@ app.use("/api/prompts", promptRoutes);
   // });
 app.use('/api/export', exportRoutes);
   // Health check endpoint
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 app.get("/", (req, res) => {
   res.json({
     message: "Family Legacy API is running",
@@ -136,67 +116,8 @@ app.use((req, res) => {
   });
 });
 
-<<<<<<< HEAD
-const initializeQueue = () => {
-  console.log("🚀 Initializing AI Analysis Queue...");
-
-  // Check if Redis is configured
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-  console.log("📡 Redis URL:", redisUrl);
-
-  // Queue event handlers
-  storyAnalysisQueue.on("ready", () => {
-    console.log("✅ AI Analysis Queue is ready and processing jobs");
-  });
-
-  storyAnalysisQueue.on("error", (error) => {
-    console.error("❌ Queue Error:", error.message);
-  });
-
-  storyAnalysisQueue.on("failed", (job, err) => {
-    console.error(`❌ Job ${job.id} failed:`, err.message);
-  });
-
-  storyAnalysisQueue.on("completed", (job, result) => {
-    console.log(`✅ Job ${job.id} completed successfully`);
-  });
-
-  storyAnalysisQueue.on("stalled", (job) => {
-    console.warn(`⚠️ Job ${job.id} stalled`);
-  });
-};
-
-// Start the server
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, async () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-
-  // Initialize queue after server starts
-  try {
-    initializeQueue();
-  } catch (error) {
-    console.error("Failed to initialize queue:", error);
-    console.warn("⚠️ Auto-tagging will be disabled");
-  }
-});
-
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM signal received: closing HTTP server");
-  await storyAnalysisQueue.close();
-  process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-  console.log("SIGINT signal received: closing HTTP server");
-  await storyAnalysisQueue.close();
-  process.exit(0);
-});
-=======
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 API available at http://localhost:${PORT}`);
 });
->>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
