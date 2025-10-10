@@ -14,8 +14,11 @@ import {
   MenuItem,
   Avatar,
   Divider,
+<<<<<<< HEAD
   Button,
   Collapse,
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 } from "@mui/material";
 import {
   Person,
@@ -24,6 +27,7 @@ import {
   MoreVert,
   Edit,
   Delete,
+<<<<<<< HEAD
   AutoAwesome,
   ExpandMore,
   ExpandLess,
@@ -36,6 +40,10 @@ import {
   getStoryAnalysis,
   triggerStoryAnalysis,
 } from "../api/services";
+=======
+} from "@mui/icons-material";
+import { getStoryById, deleteStory } from "../api/services";
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 const StoryDetail = () => {
   const { storyId } = useParams();
@@ -45,6 +53,7 @@ const StoryDetail = () => {
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
 
+<<<<<<< HEAD
   // AI Analysis states
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -58,6 +67,10 @@ const StoryDetail = () => {
       fetchStory();
       fetchAnalysis();
     }
+=======
+  useEffect(() => {
+    fetchStory();
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }, [storyId]);
 
   const fetchStory = async () => {
@@ -65,16 +78,25 @@ const StoryDetail = () => {
       setLoading(true);
       setError(null);
       const data = await getStoryById(storyId);
+<<<<<<< HEAD
       console.log("✅ Story fetched:", data);
       setStory(data);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load story");
       console.error("❌ Error fetching story:", err);
+=======
+      console.log("Story fetched:", data);
+      setStory(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load story");
+      console.error("Error fetching story:", err);
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     } finally {
       setLoading(false);
     }
   };
 
+<<<<<<< HEAD
   const fetchAnalysis = async () => {
     try {
       console.log("🔍 Fetching analysis for story:", storyId);
@@ -168,6 +190,8 @@ const StoryDetail = () => {
     }
   };
 
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -178,6 +202,10 @@ const StoryDetail = () => {
 
   const handleEdit = () => {
     handleMenuClose();
+<<<<<<< HEAD
+=======
+    console.log("Navigating to edit story:", storyId);
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     navigate(`/story-editor?id=${storyId}`);
   };
 
@@ -253,6 +281,7 @@ const StoryDetail = () => {
         m.mediaType === "audio"
     ) || [];
 
+<<<<<<< HEAD
   // Check if we have analysis data to display
   const hasAnalysisData =
     analysis &&
@@ -261,6 +290,8 @@ const StoryDetail = () => {
       (analysis.timePeriod && analysis.timePeriod !== "unknown") ||
       (analysis.lifeStage && analysis.lifeStage !== "unknown"));
 
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#FAFAFA", py: 3 }}>
       <Container maxWidth="sm" sx={{ px: { xs: 0, sm: 2 } }}>
@@ -331,7 +362,11 @@ const StoryDetail = () => {
             </Menu>
           </Box>
 
+<<<<<<< HEAD
           {/* Images */}
+=======
+          {/* Images - Instagram Carousel Style */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
           {images.length > 0 && (
             <Box
               sx={{
@@ -363,6 +398,26 @@ const StoryDetail = () => {
                   />
                 </Box>
               ))}
+<<<<<<< HEAD
+=======
+              {images.length > 1 && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: 16,
+                    right: 16,
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    color: "white",
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 2,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  1/{images.length}
+                </Box>
+              )}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             </Box>
           )}
 
@@ -387,6 +442,10 @@ const StoryDetail = () => {
 
           {/* Content Section */}
           <Box sx={{ p: 2 }}>
+<<<<<<< HEAD
+=======
+            {/* Title */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             <Typography
               variant="h6"
               sx={{
@@ -398,6 +457,10 @@ const StoryDetail = () => {
               {story.title}
             </Typography>
 
+<<<<<<< HEAD
+=======
+            {/* Content */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             <Box sx={{ mb: 2 }}>
               {story.content.split("\n\n").map((paragraph, index) => (
                 <Typography
@@ -414,6 +477,10 @@ const StoryDetail = () => {
               ))}
             </Box>
 
+<<<<<<< HEAD
+=======
+            {/* Tags */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             {story.tags && story.tags.length > 0 && (
               <Stack
                 direction="row"
@@ -441,6 +508,10 @@ const StoryDetail = () => {
               </Stack>
             )}
 
+<<<<<<< HEAD
+=======
+            {/* Audio Files */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             {audio.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Divider sx={{ mb: 2 }} />
@@ -463,6 +534,23 @@ const StoryDetail = () => {
                           type={item.mimeType || "audio/mpeg"}
                         />
                       </audio>
+<<<<<<< HEAD
+=======
+                      {(item.caption || item.description) && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: "block",
+                            textAlign: "center",
+                            fontStyle: "italic",
+                            color: "text.secondary",
+                            mt: 1,
+                          }}
+                        >
+                          {item.caption || item.description}
+                        </Typography>
+                      )}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                     </Box>
                   ))}
                 </Stack>
@@ -471,6 +559,7 @@ const StoryDetail = () => {
           </Box>
         </Paper>
 
+<<<<<<< HEAD
         {/* AI Analysis Section */}
         <Paper
           elevation={0}
@@ -805,6 +894,9 @@ const StoryDetail = () => {
         </Paper>
 
         {/* Additional Images */}
+=======
+        {/* Additional Images (if more than 1) */}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
         {images.length > 1 && (
           <Paper
             elevation={0}

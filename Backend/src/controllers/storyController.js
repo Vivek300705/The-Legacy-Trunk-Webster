@@ -1,21 +1,33 @@
 import Story from "../models/Story.model.js";
 import Media from "../models/Media.model.js";
+<<<<<<< HEAD
 import { addStoryToAnalysisQueue } from "../services/queueService.js";
 import { shouldTriggerAutoTagging } from "../config/autoTaggingConfig.js";
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
 // =================== CREATE STORY ===================
 export const createStory = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { title, content, eventDate, tags } = req.body;
     const userId = req.user._id;
     const userFamilyCircle = req.user.familyCircle;
 
     if (!userFamilyCircle) {
+=======
+    // 👇 1. Add 'tags' back to the fields read from the body
+    const { title, content, eventDate, tags } = req.body;
+    const user = req.user;
+
+    if (!user.familyCircle) {
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
       return res.status(400).json({
         message: "You must be part of a family circle to create stories",
       });
     }
 
+<<<<<<< HEAD
     const newStory = await Story.create({
       title,
       content,
@@ -44,14 +56,35 @@ export const createStory = async (req, res) => {
         // Don't fail the request if queuing fails
       });
     }
+=======
+    const newStory = new Story({
+      title,
+      content,
+      author: user._id,
+      familyCircle: user.familyCircle,
+      eventDate: eventDate || new Date(),
+      tags: tags || [], // 👇 2. Save the provided tags, or an empty array
+    });
+
+    await newStory.save();
+
+    const populatedStory = await Story.findById(newStory._id)
+      .populate("author", "name email profilePicture");
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
     res.status(201).json(populatedStory);
   } catch (error) {
     console.error("Error creating story:", error);
+<<<<<<< HEAD
     res.status(500).json({
       message: "Error creating story",
       error: error.message,
     });
+=======
+    res
+      .status(500)
+      .json({ message: "Error creating story", error: error.message });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }
 };
 
@@ -88,10 +121,16 @@ export const getUserStories = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user stories:", error);
+<<<<<<< HEAD
     res.status(500).json({
       message: "Error fetching stories",
       error: error.message,
     });
+=======
+    res
+      .status(500)
+      .json({ message: "Error fetching stories", error: error.message });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }
 };
 
@@ -139,9 +178,15 @@ export const getStoryById = async (req, res) => {
     const storyFamilyCircle = story.familyCircle._id.toString();
 
     if (userFamilyCircle !== storyFamilyCircle) {
+<<<<<<< HEAD
       return res.status(403).json({
         message: "You don't have access to this story",
       });
+=======
+      return res
+        .status(403)
+        .json({ message: "You don't have access to this story" });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     }
 
     // Fetch associated media
@@ -158,10 +203,16 @@ export const getStoryById = async (req, res) => {
     res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error fetching story:", error);
+<<<<<<< HEAD
     res.status(500).json({
       message: "Error fetching story",
       error: error.message,
     });
+=======
+    res
+      .status(500)
+      .json({ message: "Error fetching story", error: error.message });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }
 };
 
@@ -171,9 +222,15 @@ export const getFamilyCircleStories = async (req, res) => {
     const userFamilyCircle = req.user.familyCircle;
 
     if (!userFamilyCircle) {
+<<<<<<< HEAD
       return res.status(400).json({
         message: "User is not part of any family circle",
       });
+=======
+      return res
+        .status(400)
+        .json({ message: "User is not part of any family circle" });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     }
 
     const { limit = 20, skip = 0 } = req.query;
@@ -227,9 +284,15 @@ export const updateStory = async (req, res) => {
     }
 
     if (story.author.toString() !== user._id.toString()) {
+<<<<<<< HEAD
       return res.status(403).json({
         message: "You are not authorized to edit this story.",
       });
+=======
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to edit this story." });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     }
 
     const updateData = {};
@@ -245,6 +308,7 @@ export const updateStory = async (req, res) => {
       .populate("author", "name email profilePicture")
       .populate("familyCircle", "name");
 
+<<<<<<< HEAD
     // ✨ NEW: Re-trigger AI analysis if content changed significantly
     if (content && shouldTriggerAutoTagging("update", { content })) {
       console.log("📝 Re-analyzing updated story:", storyId);
@@ -266,6 +330,8 @@ export const updateStory = async (req, res) => {
       });
     }
 
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     // Fetch associated media
     const media = await Media.find({ associatedStory: storyId });
 
@@ -277,10 +343,16 @@ export const updateStory = async (req, res) => {
     res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error updating story:", error);
+<<<<<<< HEAD
     res.status(500).json({
       message: "Error updating story",
       error: error.message,
     });
+=======
+    res
+      .status(500)
+      .json({ message: "Error updating story", error: error.message });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
   }
 };
 
@@ -297,9 +369,15 @@ export const deleteStory = async (req, res) => {
     }
 
     if (story.author.toString() !== user._id.toString()) {
+<<<<<<< HEAD
       return res.status(403).json({
         message: "You are not authorized to delete this story.",
       });
+=======
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to delete this story." });
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     }
 
     // First, get all media to delete from Cloudinary if needed
@@ -311,18 +389,22 @@ export const deleteStory = async (req, res) => {
     // Cascade delete any media linked to this story
     await Media.deleteMany({ associatedStory: storyId });
 
+<<<<<<< HEAD
     // ✨ NEW: Delete associated AI analysis
     const StoryAnalysis = (await import("../models/StoryAnalysis.model.js"))
       .default;
     await StoryAnalysis.deleteOne({ storyId });
     console.log("🗑️ Deleted AI analysis for story:", storyId);
 
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     res.status(200).json({
       message: "Story and associated media deleted successfully.",
       deletedMediaCount: mediaFiles.length,
     });
   } catch (error) {
     console.error("Error deleting story:", error);
+<<<<<<< HEAD
     res.status(500).json({
       message: "Error deleting story",
       error: error.message,
@@ -657,3 +739,40 @@ export const getAllTags = async (req, res) => {
 //     });
 //   }
 // };
+=======
+    res
+      .status(500)
+      .json({ message: "Error deleting story", error: error.message });
+  }
+};
+// Get unique tags for the family circle
+export const getUniqueTagsForFamily = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user.familyCircle) {
+      return res.status(200).json([]); // No family, no tags
+    }
+
+    const uniqueTags = await Story.aggregate([
+      // 1. Find all stories in the user's family circle
+      { $match: { familyCircle: user.familyCircle } },
+      
+      // 2. Unwind the tags array (creates a doc for each tag)
+      { $unwind: '$tags' },
+
+      // 3. Group by the tag name to get unique tags
+      { $group: { _id: '$tags' } },
+      
+      // 4. Sort the tags alphabetically
+      { $sort: { _id: 1 } },
+
+      // 5. Reshape the output
+      { $project: { _id: 0, tag: '$_id' } }
+    ]);
+
+    res.status(200).json(uniqueTags.map(t => t.tag)); // Send back an array of strings
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching tags', error });
+  }
+};
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6

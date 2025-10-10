@@ -14,7 +14,10 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Grid,
+<<<<<<< HEAD
   CircularProgress,
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 } from "@mui/material";
 import {
   FamilyRestroom,
@@ -23,8 +26,11 @@ import {
   PersonAdd,
   ArrowForward,
   Email,
+<<<<<<< HEAD
   CheckCircle,
   Error as ErrorIcon,
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import {
@@ -44,7 +50,10 @@ const FamilyCircleWizard = () => {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+<<<<<<< HEAD
   const [invitationResults, setInvitationResults] = useState([]);
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
 
   // Validate email
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -88,6 +97,7 @@ const FamilyCircleWizard = () => {
   const handleSendInvitations = async () => {
     if (!familyCircle) return;
 
+<<<<<<< HEAD
     // If no invites to send, skip to overview
     if (inviteList.length === 0) {
       setStep(3);
@@ -144,6 +154,22 @@ const FamilyCircleWizard = () => {
       setStep(3);
     } catch (err) {
       setError("Error sending invitations");
+=======
+    setLoading(true);
+    try {
+      await Promise.all(
+        inviteList.map((email) => inviteMember(familyCircle._id, email))
+      );
+      // Fetch updated invites
+      const invites = await getCircleInvitations(familyCircle._id);
+      setPendingInvitations(invites);
+      // Load full circle info
+      const updated = await getFamilyCircle(familyCircle._id);
+      setFamilyCircle(updated);
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error sending invitations");
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
     } finally {
       setLoading(false);
     }
@@ -201,9 +227,13 @@ const FamilyCircleWizard = () => {
               size="large"
               disabled={loading}
               sx={{ mt: 3 }}
+<<<<<<< HEAD
               endIcon={
                 loading ? <CircularProgress size={20} /> : <ArrowForward />
               }
+=======
+              endIcon={<ArrowForward />}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
             >
               {loading ? "Creating..." : "Continue"}
             </Button>
@@ -224,7 +254,10 @@ const FamilyCircleWizard = () => {
                   handleAddEmail();
                 }
               }}
+<<<<<<< HEAD
               placeholder="Enter email address and press Enter"
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
               InputProps={{
                 endAdornment: (
                   <IconButton
@@ -240,6 +273,7 @@ const FamilyCircleWizard = () => {
             {inviteList.length > 0 && (
               <>
                 <Divider sx={{ my: 2 }} />
+<<<<<<< HEAD
                 <Typography
                   variant="subtitle2"
                   color="text.secondary"
@@ -258,12 +292,20 @@ const FamilyCircleWizard = () => {
                         mb: 1,
                       }}
                     >
+=======
+                <List>
+                  {inviteList.map((email, i) => (
+                    <ListItem key={i}>
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                       <ListItemText primary={email} />
                       <ListItemSecondaryAction>
                         <IconButton
                           onClick={() => handleRemoveEmail(email)}
                           color="error"
+<<<<<<< HEAD
                           size="small"
+=======
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                         >
                           <Delete />
                         </IconButton>
@@ -275,6 +317,7 @@ const FamilyCircleWizard = () => {
             )}
             <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
               <Button
+<<<<<<< HEAD
                 variant="outlined"
                 fullWidth
                 disabled={loading}
@@ -298,6 +341,18 @@ const FamilyCircleWizard = () => {
                   : `Send ${inviteList.length} Invitation${
                       inviteList.length !== 1 ? "s" : ""
                     }`}
+=======
+                variant="contained"
+                fullWidth
+                disabled={loading}
+                onClick={handleSendInvitations}
+              >
+                {loading
+                  ? "Sending..."
+                  : inviteList.length
+                  ? `Send ${inviteList.length} Invitations`
+                  : "Skip"}
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
               </Button>
             </Box>
           </Box>
@@ -306,6 +361,7 @@ const FamilyCircleWizard = () => {
         {/* Step 3: Overview */}
         {step === 3 && (
           <Box>
+<<<<<<< HEAD
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               {familyCircle?.name}
             </Typography>
@@ -358,15 +414,38 @@ const FamilyCircleWizard = () => {
             {pendingInvitations.length > 0 && (
               <Box sx={{ mt: 3 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+=======
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              {familyCircle?.name}
+            </Typography>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Members:
+            </Typography>
+            <List>
+              {familyCircle?.members?.map((m) => (
+                <ListItem key={m._id}>
+                  <ListItemText primary={m.name} secondary={m.email} />
+                </ListItem>
+              ))}
+            </List>
+
+            {pendingInvitations.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                   Pending Invitations ({pendingInvitations.length})
                 </Typography>
                 <Grid container spacing={2}>
                   {pendingInvitations.map((invite) => (
                     <Grid item xs={12} sm={6} key={invite._id}>
                       <Alert severity="info" icon={<Email />}>
+<<<<<<< HEAD
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
                           {invite.email}
                         </Typography>
+=======
+                        <Typography variant="body2">{invite.email}</Typography>
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
                         <Typography variant="caption" color="text.secondary">
                           Invited by {invite.invitedBy?.name}
                         </Typography>
@@ -377,6 +456,7 @@ const FamilyCircleWizard = () => {
               </Box>
             )}
 
+<<<<<<< HEAD
             <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
               <Button
                 variant="outlined"
@@ -393,6 +473,15 @@ const FamilyCircleWizard = () => {
                 Go to Circle Page
               </Button>
             </Box>
+=======
+            <Button
+              sx={{ mt: 3 }}
+              variant="contained"
+              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
+            >
+              Go to Circle Page
+            </Button>
+>>>>>>> 9eb87e72a28587b503058775bf32d11302800ad6
           </Box>
         )}
       </Paper>
