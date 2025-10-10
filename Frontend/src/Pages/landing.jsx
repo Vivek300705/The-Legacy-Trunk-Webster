@@ -18,8 +18,6 @@ import {
 
 const Landing = () => {
   const navigate = useNavigate();
-
-  // FIXED: Use firebaseUser to check if logged in
   const firebaseUser = useSelector((state) => state.auth.firebaseUser);
   const mongoUser = useSelector((state) => state.auth.mongoUser);
 
@@ -27,26 +25,22 @@ const Landing = () => {
     {
       icon: <AutoStories sx={{ fontSize: 48, color: "primary.main" }} />,
       title: "Preserve Stories",
-      description:
-        "Capture and preserve precious family memories for generations to come.",
+      description: "Capture and preserve precious family memories for generations to come.",
     },
     {
       icon: <Group sx={{ fontSize: 48, color: "primary.main" }} />,
       title: "Family Circles",
-      description:
-        "Create private circles where family members can share and connect.",
+      description: "Create private circles where family members can share and connect.",
     },
     {
       icon: <CloudUpload sx={{ fontSize: 48, color: "primary.main" }} />,
       title: "Rich Media",
-      description:
-        "Upload photos, videos, and audio recordings to bring stories to life.",
+      description: "Upload photos, videos, and audio recordings to bring stories to life.",
     },
     {
       icon: <Timeline sx={{ fontSize: 48, color: "primary.main" }} />,
       title: "Timeline View",
-      description:
-        "Organize memories chronologically and watch your legacy unfold.",
+      description: "Organize memories chronologically and watch your legacy unfold.",
     },
     {
       icon: <Download sx={{ fontSize: 48, color: "primary.main" }} />,
@@ -60,8 +54,8 @@ const Landing = () => {
       {/* Hero Section */}
       <Box
         sx={{
-          background:
-            "linear-gradient(135deg, #FED7AA 0%, #FDBA74 50%, #FB923C 100%)",
+          // 👈 Changed: Swapped the orange gradient for the new primary theme color
+          background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
           py: { xs: 8, md: 12 },
           position: "relative",
           overflow: "hidden",
@@ -102,7 +96,6 @@ const Landing = () => {
                 lasting legacy for generations to treasure.
               </Typography>
 
-              {/* Show buttons only if user is NOT logged in */}
               {!firebaseUser && (
                 <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
                   <Button
@@ -110,13 +103,14 @@ const Landing = () => {
                     size="large"
                     onClick={() => navigate("/signup")}
                     sx={{
-                      backgroundColor: "white",
-                      color: "primary.main",
+                      // 👈 Changed: Use the vibrant secondary color for the main button
+                      backgroundColor: "secondary.main",
+                      color: "white",
                       px: 4,
                       py: 1.5,
                       fontSize: "1.1rem",
                       "&:hover": {
-                        backgroundColor: "rgba(255,255,255,0.9)",
+                        backgroundColor: "secondary.dark",
                       },
                     }}
                   >
@@ -143,7 +137,6 @@ const Landing = () => {
                 </Box>
               )}
 
-              {/* Show welcome message if user IS logged in */}
               {firebaseUser && (
                 <Typography
                   variant="h5"
@@ -188,22 +181,14 @@ const Landing = () => {
         <Typography
           variant="h2"
           align="center"
-          sx={{
-            mb: 2,
-            fontWeight: 700,
-            color: "text.primary",
-          }}
+          sx={{ mb: 2, fontWeight: 700, color: "text.primary" }}
         >
           Everything You Need to Preserve Your Legacy
         </Typography>
         <Typography
           variant="h6"
           align="center"
-          sx={{
-            mb: 6,
-            color: "text.secondary",
-            fontWeight: 400,
-          }}
+          sx={{ mb: 6, color: "text.secondary", fontWeight: 400 }}
         >
           Powerful tools designed for families who cherish their stories
         </Typography>
@@ -227,7 +212,8 @@ const Landing = () => {
                 transition: "transform 0.3s ease, box-shadow 0.3s ease",
                 "&:hover": {
                   transform: "translateY(-8px)",
-                  boxShadow: "0 12px 32px rgba(217, 119, 6, 0.2)",
+                  // 👈 Changed: Use theme's secondary color for the hover glow
+                  boxShadow: (theme) => `0 12px 32px ${theme.palette.secondary.main}33`,
                 },
               }}
             >
@@ -245,11 +231,11 @@ const Landing = () => {
         </Box>
       </Container>
 
-      {/* CTA Section - Only show if user is NOT logged in */}
+      {/* CTA Section */}
       {!firebaseUser && (
         <Box
           sx={{
-            backgroundColor: "primary.main",
+            backgroundColor: "primary.main", // This will now be purple
             py: 8,
             textAlign: "center",
           }}
@@ -257,20 +243,13 @@ const Landing = () => {
           <Container maxWidth="md">
             <Typography
               variant="h2"
-              sx={{
-                color: "white",
-                mb: 2,
-                fontWeight: 700,
-              }}
+              sx={{ color: "white", mb: 2, fontWeight: 700 }}
             >
               Start Building Your Legacy Today
             </Typography>
             <Typography
               variant="h6"
-              sx={{
-                color: "rgba(255,255,255,0.9)",
-                mb: 4,
-              }}
+              sx={{ color: "rgba(255,255,255,0.9)", mb: 4 }}
             >
               Join families worldwide who are preserving their precious memories
             </Typography>
@@ -279,13 +258,14 @@ const Landing = () => {
               size="large"
               onClick={() => navigate("/signup")}
               sx={{
-                backgroundColor: "white",
-                color: "primary.main",
+                // 👈 Changed: Use secondary color for a vibrant CTA button
+                backgroundColor: "secondary.main",
+                color: "white",
                 px: 6,
                 py: 2,
                 fontSize: "1.2rem",
                 "&:hover": {
-                  backgroundColor: "rgba(255,255,255,0.9)",
+                  backgroundColor: "secondary.dark",
                 },
               }}
             >

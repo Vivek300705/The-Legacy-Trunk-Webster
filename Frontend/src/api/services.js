@@ -214,3 +214,7 @@ export const getFamilyTreeData = async (circleId) => {
   return response.data;
 };
 
+export const getRandomPrompt = async () => {
+  const response = await api.get('/prompts/random');
+  return response.data;
+};

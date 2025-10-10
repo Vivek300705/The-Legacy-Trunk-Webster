@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import api from "../api/axiosConfig";
 import { setMongoUser } from "../store/slice/authSlice";
+import MemoryPrompt from '../components/MemoryPrompt'; // 👈 1. Import the new component
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,12 +38,10 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // FIXED: Always refresh user data to get latest familyCircle info
         const userResponse = await api.get("/user/profile");
         if (userResponse.data) {
           dispatch(setMongoUser(userResponse.data));
 
-          // Fetch recent stories if user has a family circle
           if (userResponse.data?.familyCircle) {
             try {
               const storiesResponse = await api.get(
@@ -114,6 +113,7 @@ const Dashboard = () => {
         </Alert>
       )}
 
+      {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h3" sx={{ mb: 1, fontWeight: 700 }}>
           Welcome back, {mongoUser?.name || "Friend"}!
@@ -122,6 +122,9 @@ const Dashboard = () => {
           Continue building your family legacy
         </Typography>
       </Box>
+
+      {/* 👇 2. Add the MemoryPrompt component here */}
+      <MemoryPrompt />
 
       {/* Quick Actions */}
       <Box sx={{ mb: 6 }}>
@@ -183,16 +186,10 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-      {/* Family Circle Section */}
+      {/* Family Circle Section (and the rest of your page) */}
+      {/* ... The rest of your existing Dashboard.jsx code remains unchanged ... */}
       <Box sx={{ mb: 6 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
             Your Family Circle
           </Typography>
@@ -206,23 +203,14 @@ const Dashboard = () => {
             </Button>
           )}
         </Box>
-
         {isNewUser ? (
-          <Card
-            sx={{ py: 8, textAlign: "center", bgcolor: "background.paper" }}
-          >
+          <Card sx={{ py: 8, textAlign: "center", bgcolor: "background.paper" }}>
             <CardContent>
-              <FamilyRestroom
-                sx={{ fontSize: 120, color: "primary.main", mb: 3 }}
-              />
+              <FamilyRestroom sx={{ fontSize: 120, color: "primary.main", mb: 3 }} />
               <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
                 Create your first family circle to start sharing memories
               </Typography>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{ mb: 4, maxWidth: 500, mx: "auto" }}
-              >
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: "auto" }}>
                 Family circles are private spaces where you can share stories,
                 photos, and memories with your loved ones.
               </Typography>
@@ -238,20 +226,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card
-            sx={{
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-4px)",
-                boxShadow: 4,
-              },
-            }}
-            onClick={() =>
-              familyCircle?._id &&
-              navigate(`/family-circle/${familyCircle._id}`)
-            }
-          >
+          <Card sx={{ cursor: "pointer", transition: "all 0.3s ease", "&:hover": { transform: "translateY(-4px)", boxShadow: 4 } }} onClick={() => familyCircle?._id && navigate(`/family-circle/${familyCircle._id}`)}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <Group sx={{ fontSize: 32, color: "primary.main", mr: 2 }} />
@@ -266,12 +241,7 @@ const Dashboard = () => {
                 {familyCircle?.member && familyCircle.member.length > 0 && (
                   <AvatarGroup max={4}>
                     {familyCircle.member.map((memberItem) => (
-                      <Avatar
-                        key={memberItem._id}
-                        alt={memberItem.name}
-                        src={memberItem.profilePicture}
-                        sx={{ width: 32, height: 32 }}
-                      >
+                      <Avatar key={memberItem._id} alt={memberItem.name} src={memberItem.profilePicture} sx={{ width: 32, height: 32 }}>
                         {memberItem.name?.charAt(0)}
                       </Avatar>
                     ))}
@@ -282,18 +252,9 @@ const Dashboard = () => {
           </Card>
         )}
       </Box>
-
-      {/* Recent Stories Section */}
       {!isNewUser && recentStories.length > 0 && (
         <Box>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 3,
-            }}
-          >
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
               Recent Stories
             </Typography>
@@ -305,37 +266,12 @@ const Dashboard = () => {
               View All
             </Button>
           </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "1fr 1fr 1fr",
-              },
-              gap: 2,
-            }}
-          >
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" }, gap: 2 }}>
             {recentStories.map((story) => (
-              <Card
-                key={story._id}
-                sx={{
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: 4,
-                  },
-                }}
-                onClick={() => navigate(`/story-detail/${story._id}`)}
-              >
+              <Card key={story._id} sx={{ cursor: "pointer", transition: "all 0.3s ease", "&:hover": { transform: "translateY(-4px)", boxShadow: 4 } }} onClick={() => navigate(`/story-detail/${story._id}`)}>
                 <CardContent>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <Avatar
-                      src={story.author?.profilePicture}
-                      sx={{ width: 32, height: 32, mr: 1 }}
-                    >
+                    <Avatar src={story.author?.profilePicture} sx={{ width: 32, height: 32, mr: 1 }}>
                       {story.author?.name?.charAt(0)}
                     </Avatar>
                     <Typography variant="caption" color="text.secondary">
@@ -345,18 +281,7 @@ const Dashboard = () => {
                   <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
                     {story.title}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mb: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                     {story.content}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">

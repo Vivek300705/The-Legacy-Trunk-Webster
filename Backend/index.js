@@ -17,6 +17,7 @@ import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import mediaRoutes from "./src/routes/mediaRoutes.js"; // ✅ Add this import
 import searchRoutes from "./src/routes/searchRoutes.js";
+import promptRoutes from './src/routes/promptRoutes.js';
 
 // Import your service account key for Firebase using createRequire
 const require = createRequire(import.meta.url);
@@ -73,7 +74,11 @@ app.use("/api/relationships", relationshipRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/media", mediaRoutes); // ✅ Add this line
 app.use("/api/search", searchRoutes); // ✅ Add search routes
-
+app.use("/api/prompts", promptRoutes);
+// app.get('/api/prompts/random', (req, res) => {
+//   console.log('--- /api/prompts/random TEST ROUTE WAS HIT! ---');
+//   res.json({ question: 'This is a successful test from index.js' });
+// });
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({
