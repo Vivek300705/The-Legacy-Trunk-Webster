@@ -15,6 +15,7 @@ import searchRoutes from "./src/routes/searchRoutes.js";
 import promptRoutes from "./src/routes/promptRoutes.js";
 import storyAnalysisQueue from "./src/services/queueService.js";
 import analysisRoutes from "./src/routes/analysisRoutes.js";
+import exportRoutes from "./src/routes/exportRoutes.js";
 
 dotenv.config();
 
@@ -80,6 +81,8 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/analysis", analysisRoutes);
 app.use("/api/prompts", promptRoutes);
+app.use('/api/export', exportRoutes);
+
 
 // ✅ Health check
 app.get("/", (req, res) => {
