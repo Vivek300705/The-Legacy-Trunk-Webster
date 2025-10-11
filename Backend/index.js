@@ -20,6 +20,7 @@ import searchRoutes from "./src/routes/searchRoutes.js";
 import promptRoutes from './src/routes/promptRoutes.js';
 import storyAnalysisQueue from "./src/services/queueService.js";
 import analysisRoutes from "./src/routes/analysisRoutes.js";
+import exportRoutes from "./src/routes/exportRoutes.js"
 
 // Import your service account key for Firebase using createRequire
 const require = createRequire(import.meta.url);
@@ -47,7 +48,7 @@ app.use(
       "https://the-legacy-trunk-webster-4oyf.vercel.app", // ✅ Alternative Vercel URL
       "http://localhost:5173", // ✅ Vite dev server
       "http://localhost:3000",
-      "https://the-legacy-trunk-webster-eta.vercel.app/signup",
+      "https://the-legacy-trunk-webster-eta.vercel.app",
       "https://the-legacy-trunk-webster-5t4f.onrender.com/api"
     ],
     credentials: true,
@@ -85,6 +86,7 @@ app.use("/api/prompts", promptRoutes);
 //   console.log('--- /api/prompts/random TEST ROUTE WAS HIT! ---');
 //   res.json({ question: 'This is a successful test from index.js' });
 // });
+app.use("/api/export",exportRoutes);
 // Health check endpoint
 app.get("/", (req, res) => {
   res.json({
