@@ -51,7 +51,7 @@ app.use(
       "https://the-legacy-trunk-webster-4oyf.vercel.app",
       "http://localhost:5173",
       "http://localhost:3000",
-      "https://the-legacy-trunk-webster-eta.vercel.app/"
+      "https://the-legacy-trunk-webster-eta.vercel.app"
     ],
     credentials: true,
   })
