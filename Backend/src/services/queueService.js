@@ -3,7 +3,10 @@ import { analyzeStory } from "./storyAnalyzer.js";
 import StoryAnalysis from "../models/StoryAnalysis.model.js";
 
 export const storyAnalysisQueue = new Bull("story-analysis", {
-  redis: process.env.REDIS_URL || "redis://localhost:6379",
+  redis: {
+    url: process.env.REDIS_URL || "redis://localhost:6379",
+    tls: process.env.REDIS_URL?.startsWith("rediss://") ? {} : undefined,
+  },
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -14,6 +17,7 @@ export const storyAnalysisQueue = new Bull("story-analysis", {
     removeOnFail: false,
   },
 });
+
 
 // Process analysis jobs
 storyAnalysisQueue.process(async (job) => {
