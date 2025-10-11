@@ -99,6 +99,11 @@ export const deleteFamilyCircle = async (circleId) => {
   return response.data;
 };
 
+export const getFamilyTreeData = async (circleId) => {
+  const response = await api.get(`/family-circles/${circleId}/tree`);
+  return response.data;
+};
+
 // =================== RELATIONSHIPS ===================
 export const sendRelationshipRequest = async (
   recipientId,
@@ -117,9 +122,7 @@ export const getPendingRequests = async () => {
 };
 
 export const respondToRequest = async (requestId, action) => {
-  const response = await api.put(`/relationships/${requestId}`, {
-    action, // should be 'approved' or 'rejected'
-  });
+  const response = await api.put(`/relationships/${requestId}`, { action });
   return response.data;
 };
 
@@ -146,7 +149,6 @@ export const createStory = async (storyData) => {
   return response.data;
 };
 
-// ✅ FIXED: Now accepts familyId parameter to match the route
 export const getStoriesForFamily = async (familyId) => {
   const response = await api.get(`/stories/family/${familyId}`);
   return response.data;
@@ -167,18 +169,32 @@ export const getStoryById = async (storyId) => {
   return response.data;
 };
 
-// ✅ Matches route: GET /stories/user
 export const getUserOwnStories = async (limit = 10, skip = 0) => {
   const response = await api.get(`/stories/user?limit=${limit}&skip=${skip}`);
   return response.data;
 };
 
-// ✅ Matches route: GET /stories/family-circle
 export const getFamilyCircleStories = async (limit = 20, skip = 0) => {
   const response = await api.get(
     `/stories/family-circle?limit=${limit}&skip=${skip}`
   );
   return response.data;
+};
+
+// AI Analysis
+export const getStoryWithAnalysis = async (storyId) => {
+  const response = await api.get(`/stories/${storyId}/analysis`);
+  return response.data;
+};
+
+export const triggerAIAnalysis = async (storyId) => {
+  const response = await api.post(`/stories/${storyId}/analyze`);
+  return response.data;
+};
+
+export const getAnalysisStatus = async (storyId) => {
+  const response = await api.get(`/stories/${storyId}`);
+  return response.data.analysis;
 };
 
 // =================== MEDIA ===================
@@ -188,28 +204,70 @@ export const uploadMedia = async (storyId, file, description = "") => {
   formData.append("description", description);
 
   const response = await api.post(`/media/upload/${storyId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
-
-export const searchContent = async (query, filters = {}) => {
+// =================== SEARCH ===================
+export const searchContent = async (query = "", filters = {}) => {
   const params = new URLSearchParams();
-  params.append("q", query);
 
+  if (query && query.trim()) params.append("q", query.trim());
   if (filters.type) params.append("type", filters.type);
   if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
   if (filters.dateTo) params.append("dateTo", filters.dateTo);
 
-  const response = await api.get(`/search?${params.toString()}`);
+  const queryString = params.toString();
+  const url = queryString ? `/search?${queryString}` : `/search`;
+
+  console.log("🔍 Searching with params:", queryString);
+
+  const response = await api.get(url);
   return response.data;
 };
 
+export const searchStoriesByTags = async (filters) => {
+  const params = new URLSearchParams(filters).toString();
+  const response = await api.get(`/stories/search-by-tags?${params}`);
+  return response.data;
+};
 
-export const getFamilyTreeData = async (circleId) => {
-  const response = await api.get(`/family-circles/${circleId}/tree`);
+export const getAllTags = async () => {
+  const response = await api.get("/stories/tags");
+  return response.data;
+};
+
+// =================== PROMPTS ===================
+export const getRandomPrompt = async () => {
+  const response = await api.get("/prompts/random");
+  return response.data;
+};
+export const getStoryAnalysis = async (storyId) => {
+  const response = await api.get(`/analysis/story/${storyId}`);
+  return response.data;
+};
+
+export const triggerStoryAnalysis = async (storyId) => {
+  const response = await api.post(`/analysis/story/${storyId}/analyze`);
+  return response.data;
+};
+
+export const getAllAITags = async () => {
+  const response = await api.get("/analysis/tags/all");
+  return response.data;
+};
+
+export const searchStoriesByAITags = async (filters) => {
+  const params = new URLSearchParams(filters).toString();
+  const response = await api.get(`/analysis/search?${params}`);
+  return response.data;
+};export const getUniqueTags = async () => {
+  const response = await api.get("/stories/tags/unique");
+  return response.data;
+};export const exportStoriesPDF = async () => {
+  const response = await api.get("/export/stories/pdf", {
+    responseType: "blob", // Important: tells axios to expect a file blob
+  });
   return response.data;
 };

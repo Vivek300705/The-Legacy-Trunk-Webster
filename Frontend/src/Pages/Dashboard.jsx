@@ -17,11 +17,14 @@ import {
   AutoStories,
   Timeline,
   FamilyRestroom,
+  Download, // 👈 1. Import the Download icon
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import api from "../api/axiosConfig";
 import { setMongoUser } from "../store/slice/authSlice";
+import MemoryPrompt from '../components/MemoryPrompt';
+import { exportStoriesPDF } from "../api/services";// 👈 2. Import the new API service
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -33,16 +36,39 @@ const Dashboard = () => {
   const [recentStories, setRecentStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // 👇 3. Add state for the download button
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // 👇 4. Add the handler function for the download logic
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await exportStoriesPDF();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'family-stories.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url); // Clean up the URL object
+    } catch (error) {
+      console.error("Failed to download PDF:", error);
+      setError("Could not export stories. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // FIXED: Always refresh user data to get latest familyCircle info
         const userResponse = await api.get("/user/profile");
         if (userResponse.data) {
           dispatch(setMongoUser(userResponse.data));
 
-          // Fetch recent stories if user has a family circle
           if (userResponse.data?.familyCircle) {
             try {
               const storiesResponse = await api.get(
@@ -123,7 +149,8 @@ const Dashboard = () => {
         </Typography>
       </Box>
 
-      {/* Quick Actions */}
+      <MemoryPrompt />
+
       <Box sx={{ mb: 6 }}>
         <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
           Quick Actions
@@ -183,13 +210,14 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-      {/* Family Circle Section */}
       <Box sx={{ mb: 6 }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap", // Added for responsiveness
+            gap: 2, // Added for spacing
             mb: 3,
           }}
         >
@@ -197,32 +225,35 @@ const Dashboard = () => {
             Your Family Circle
           </Typography>
           {!isNewUser && familyCircle?._id && (
-            <Button
-              variant="outlined"
-              startIcon={<Group />}
-              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
-            >
-              Manage Circle
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Group />}
+                onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
+              >
+                Manage Circle
+              </Button>
+              {/* 👇 5. Add the new export button here */}
+              <Button
+                variant="contained"
+                startIcon={<Download />}
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                {isDownloading ? 'Generating...' : 'Export Stories'}
+              </Button>
+            </Box>
           )}
         </Box>
 
         {isNewUser ? (
-          <Card
-            sx={{ py: 8, textAlign: "center", bgcolor: "background.paper" }}
-          >
+          <Card sx={{ py: 8, textAlign: "center", bgcolor: "background.paper" }}>
             <CardContent>
-              <FamilyRestroom
-                sx={{ fontSize: 120, color: "primary.main", mb: 3 }}
-              />
+              <FamilyRestroom sx={{ fontSize: 120, color: "primary.main", mb: 3 }} />
               <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
                 Create your first family circle to start sharing memories
               </Typography>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{ mb: 4, maxWidth: 500, mx: "auto" }}
-              >
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: "auto" }}>
                 Family circles are private spaces where you can share stories,
                 photos, and memories with your loved ones.
               </Typography>
@@ -238,20 +269,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          <Card
-            sx={{
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-4px)",
-                boxShadow: 4,
-              },
-            }}
-            onClick={() =>
-              familyCircle?._id &&
-              navigate(`/family-circle/${familyCircle._id}`)
-            }
-          >
+          <Card sx={{ cursor: "pointer", transition: "all 0.3s ease", "&:hover": { transform: "translateY(-4px)", boxShadow: 4 } }} onClick={() => familyCircle?._id && navigate(`/family-circle/${familyCircle._id}`)}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                 <Group sx={{ fontSize: 32, color: "primary.main", mr: 2 }} />
@@ -266,12 +284,7 @@ const Dashboard = () => {
                 {familyCircle?.member && familyCircle.member.length > 0 && (
                   <AvatarGroup max={4}>
                     {familyCircle.member.map((memberItem) => (
-                      <Avatar
-                        key={memberItem._id}
-                        alt={memberItem.name}
-                        src={memberItem.profilePicture}
-                        sx={{ width: 32, height: 32 }}
-                      >
+                      <Avatar key={memberItem._id} alt={memberItem.name} src={memberItem.profilePicture} sx={{ width: 32, height: 32 }}>
                         {memberItem.name?.charAt(0)}
                       </Avatar>
                     ))}
@@ -282,18 +295,9 @@ const Dashboard = () => {
           </Card>
         )}
       </Box>
-
-      {/* Recent Stories Section */}
       {!isNewUser && recentStories.length > 0 && (
         <Box>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 3,
-            }}
-          >
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
               Recent Stories
             </Typography>
@@ -305,37 +309,12 @@ const Dashboard = () => {
               View All
             </Button>
           </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "1fr 1fr 1fr",
-              },
-              gap: 2,
-            }}
-          >
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" }, gap: 2 }}>
             {recentStories.map((story) => (
-              <Card
-                key={story._id}
-                sx={{
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: 4,
-                  },
-                }}
-                onClick={() => navigate(`/story-detail?id=${story._id}`)}
-              >
+              <Card key={story._id} sx={{ cursor: "pointer", transition: "all 0.3s ease", "&:hover": { transform: "translateY(-4px)", boxShadow: 4 } }} onClick={() => navigate(`/story-detail/${story._id}`)}>
                 <CardContent>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <Avatar
-                      src={story.author?.profilePicture}
-                      sx={{ width: 32, height: 32, mr: 1 }}
-                    >
+                    <Avatar src={story.author?.profilePicture} sx={{ width: 32, height: 32, mr: 1 }}>
                       {story.author?.name?.charAt(0)}
                     </Avatar>
                     <Typography variant="caption" color="text.secondary">
@@ -345,18 +324,7 @@ const Dashboard = () => {
                   <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
                     {story.title}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mb: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }}
-                  >
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                     {story.content}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
@@ -370,6 +338,7 @@ const Dashboard = () => {
           </Box>
         </Box>
       )}
+      
     </Container>
   );
 };

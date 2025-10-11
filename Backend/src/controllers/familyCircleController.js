@@ -3,7 +3,7 @@ import User from "../models/User.model.js";
 import Invitation from "../models/Invitation.model.js";
 import crypto from "crypto";
 import { sendInvitationEmail } from ".././utils/sendInvitationEmail.js";
-
+import Relation from "../models/Relationship.model.js";
 /* ---------------------------
    Create Family Circle
 ---------------------------- */
@@ -631,50 +631,36 @@ export const cancelInvitation = async (req, res) => {
 export const getFamilyTreeData = async (req, res) => {
   try {
     const { circleId } = req.params;
-    const userId = req.user._id;
 
-    const circle = await FamilyCircle.findById(circleId)
+    const family = await Family.findById(circleId)
       .populate("admin", "name email profilePicture")
       .populate("member", "name email profilePicture");
 
-    if (!circle) {
+    if (!family) {
       return res.status(404).json({ message: "Family circle not found" });
     }
 
-    const isMember =
-      circle.admin._id.toString() === userId.toString() ||
-      circle.member.some((m) => m._id.toString() === userId.toString());
+    const memberIds = [family.admin._id, ...family.member.map((m) => m._id)];
 
-    if (!isMember) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const allMemberIds = [circle.admin._id, ...circle.member.map((m) => m._id)];
-
-    // Get only admin-approved relationships
-    const relationships = await Relationship.find({
-      status: "approved",
-      approvedByAdmin: true, // ✅ Only admin-approved
+    // Get all approved relationships
+    const relationships = await Relation.find({
+      status: "approved", // This correctly finds relationships both users have agreed to
+      // REMOVED: approvedByAdmin: true,
       $or: [
-        { requester: { $in: allMemberIds } },
-        { recipient: { $in: allMemberIds } },
+        { requester: { $in: memberIds } },
+        { recipient: { $in: memberIds } },
       ],
     })
       .populate("requester", "name email profilePicture")
       .populate("recipient", "name email profilePicture");
 
-    // Build tree structure
-    const treeData = buildFamilyTree(circle, relationships);
-
+    // The rest of your code to build the response can stay the same,
+    // but here is a simplified version that works with the frontend component.
     res.status(200).json({
-      circle: {
-        _id: circle._id,
-        name: circle.name,
-      },
-      tree: treeData,
-      members: [circle.admin, ...circle.member],
-      relationships: relationships,
+      ...family.toObject(),
+      relationships, // This will now contain the approved relationships
     });
+
   } catch (error) {
     console.error("Error fetching family tree:", error);
     res.status(500).json({
@@ -728,3 +714,4 @@ function buildFamilyTree(circle, relationships) {
   const roots = nodes.filter((n) => n.parents.length === 0);
   return roots.length > 0 ? roots[0] : nodes[0];
 }
+

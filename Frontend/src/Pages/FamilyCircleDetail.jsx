@@ -425,9 +425,9 @@ const FamilyCircleDetail = () => {
 
         <Grid container spacing={3}>
           {/* Admin Info Card */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={4} width={"450px"}>
             <Paper sx={{ p: 3, borderRadius: 2 }}>
-              <Typography variant="h6" fontWeight={600} gutterBottom>
+              <Typography variant="h6" fontWeight={600}  gutterBottom>
                 Circle Admin
               </Typography>
               <Divider sx={{ mb: 2 }} />
@@ -551,7 +551,7 @@ const FamilyCircleDetail = () => {
                   mb: 2,
                 }}
               >
-                <Typography variant="h6" fontWeight={600}>
+                <Typography variant="h6" fontWeight={600} width={"300px"}>
                   Family Members ({familyData?.member?.length || 0})
                 </Typography>
                 {isAdmin && (

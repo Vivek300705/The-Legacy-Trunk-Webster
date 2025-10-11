@@ -1,5 +1,7 @@
 import Story from "../models/Story.model.js";
 import Media from "../models/Media.model.js";
+import { addStoryToAnalysisQueue } from "../services/queueService.js";
+import { shouldTriggerAutoTagging } from "../config/autoTaggingConfig.js";
 
 // =================== CREATE STORY ===================
 export const createStory = async (req, res) => {
@@ -27,12 +29,29 @@ export const createStory = async (req, res) => {
       .populate("author", "name email profilePicture")
       .populate("familyCircle", "name");
 
+    // ✨ NEW: Trigger AI auto-tagging
+    if (shouldTriggerAutoTagging("create", { content })) {
+      console.log("📝 Auto-tagging enabled for story:", newStory._id);
+
+      // Queue the analysis (don't wait for it)
+      addStoryToAnalysisQueue(
+        newStory._id.toString(),
+        content,
+        title,
+        [] // No media yet, will be added after upload
+      ).catch((err) => {
+        console.error("Failed to queue AI analysis:", err);
+        // Don't fail the request if queuing fails
+      });
+    }
+
     res.status(201).json(populatedStory);
   } catch (error) {
     console.error("Error creating story:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating story", error: error.message });
+    res.status(500).json({
+      message: "Error creating story",
+      error: error.message,
+    });
   }
 };
 
@@ -69,9 +88,10 @@ export const getUserStories = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user stories:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching stories", error: error.message });
+    res.status(500).json({
+      message: "Error fetching stories",
+      error: error.message,
+    });
   }
 };
 
@@ -119,9 +139,9 @@ export const getStoryById = async (req, res) => {
     const storyFamilyCircle = story.familyCircle._id.toString();
 
     if (userFamilyCircle !== storyFamilyCircle) {
-      return res
-        .status(403)
-        .json({ message: "You don't have access to this story" });
+      return res.status(403).json({
+        message: "You don't have access to this story",
+      });
     }
 
     // Fetch associated media
@@ -138,9 +158,10 @@ export const getStoryById = async (req, res) => {
     res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error fetching story:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching story", error: error.message });
+    res.status(500).json({
+      message: "Error fetching story",
+      error: error.message,
+    });
   }
 };
 
@@ -150,9 +171,9 @@ export const getFamilyCircleStories = async (req, res) => {
     const userFamilyCircle = req.user.familyCircle;
 
     if (!userFamilyCircle) {
-      return res
-        .status(400)
-        .json({ message: "User is not part of any family circle" });
+      return res.status(400).json({
+        message: "User is not part of any family circle",
+      });
     }
 
     const { limit = 20, skip = 0 } = req.query;
@@ -206,9 +227,9 @@ export const updateStory = async (req, res) => {
     }
 
     if (story.author.toString() !== user._id.toString()) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to edit this story." });
+      return res.status(403).json({
+        message: "You are not authorized to edit this story.",
+      });
     }
 
     const updateData = {};
@@ -224,6 +245,27 @@ export const updateStory = async (req, res) => {
       .populate("author", "name email profilePicture")
       .populate("familyCircle", "name");
 
+    // ✨ NEW: Re-trigger AI analysis if content changed significantly
+    if (content && shouldTriggerAutoTagging("update", { content })) {
+      console.log("📝 Re-analyzing updated story:", storyId);
+
+      const media = await Media.find({ associatedStory: storyId });
+
+      addStoryToAnalysisQueue(
+        storyId,
+        content,
+        title,
+        media.map((m) => ({
+          url: m.fileUrl || m.url,
+          type: m.type,
+          mimeType: m.mimeType,
+          description: m.description,
+        }))
+      ).catch((err) => {
+        console.error("Failed to queue AI re-analysis:", err);
+      });
+    }
+
     // Fetch associated media
     const media = await Media.find({ associatedStory: storyId });
 
@@ -235,9 +277,10 @@ export const updateStory = async (req, res) => {
     res.status(200).json(storyWithMedia);
   } catch (error) {
     console.error("Error updating story:", error);
-    res
-      .status(500)
-      .json({ message: "Error updating story", error: error.message });
+    res.status(500).json({
+      message: "Error updating story",
+      error: error.message,
+    });
   }
 };
 
@@ -254,9 +297,9 @@ export const deleteStory = async (req, res) => {
     }
 
     if (story.author.toString() !== user._id.toString()) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to delete this story." });
+      return res.status(403).json({
+        message: "You are not authorized to delete this story.",
+      });
     }
 
     // First, get all media to delete from Cloudinary if needed
@@ -268,14 +311,349 @@ export const deleteStory = async (req, res) => {
     // Cascade delete any media linked to this story
     await Media.deleteMany({ associatedStory: storyId });
 
+    // ✨ NEW: Delete associated AI analysis
+    const StoryAnalysis = (await import("../models/StoryAnalysis.model.js"))
+      .default;
+    await StoryAnalysis.deleteOne({ storyId });
+    console.log("🗑️ Deleted AI analysis for story:", storyId);
+
     res.status(200).json({
       message: "Story and associated media deleted successfully.",
       deletedMediaCount: mediaFiles.length,
     });
   } catch (error) {
     console.error("Error deleting story:", error);
-    res
-      .status(500)
-      .json({ message: "Error deleting story", error: error.message });
+    res.status(500).json({
+      message: "Error deleting story",
+      error: error.message,
+    });
   }
 };
+// =================== SEARCH STORIES BY TAGS (AI) ===================
+export const searchStoriesByTags = async (req, res) => {
+  try {
+    const { theme, emotion, timePeriod, lifeStage, location } = req.query;
+    const userFamilyCircle = req.user.familyCircle;
+
+    if (!userFamilyCircle) {
+      return res.status(400).json({
+        message: "User is not part of any family circle",
+      });
+    }
+
+    console.log("🔍 Searching by AI tags:", { theme, emotion, timePeriod, lifeStage, location });
+
+    // Import StoryAnalysis model
+    const StoryAnalysis = (await import("../models/StoryAnalysis.model.js")).default;
+
+    // Build query for AI analysis
+    const query = {};
+    if (theme) query.themes = theme;
+    if (emotion) query.emotions = emotion;
+    if (timePeriod) query.timePeriod = timePeriod;
+    if (lifeStage) query.lifeStage = lifeStage;
+    if (location) query.locations = location;
+
+    console.log("📋 Analysis query:", query);
+
+    // Find matching analyses
+    const analyses = await StoryAnalysis.find(query).lean();
+    console.log(`📊 Found ${analyses.length} matching analyses`);
+
+    if (analyses.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    // Get story IDs
+    const storyIds = analyses.map(a => a.storyId);
+
+    // Get stories that match AND are in user's family circle
+    const stories = await Story.find({
+      _id: { $in: storyIds },
+      familyCircle: userFamilyCircle
+    })
+      .populate("author", "name email profilePicture")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    console.log(`📚 Found ${stories.length} stories in user's family`);
+
+    // Get media for each story
+    const storiesWithMedia = await Promise.all(
+      stories.map(async (story) => {
+        const media = await Media.find({ associatedStory: story._id }).lean();
+        const analysis = analyses.find(a => a.storyId.toString() === story._id.toString());
+        
+        return {
+          ...story,
+          media,
+          analysis: analysis ? {
+            themes: analysis.themes,
+            emotions: analysis.emotions,
+            timePeriod: analysis.timePeriod,
+            lifeStage: analysis.lifeStage,
+            locations: analysis.locations,
+            keyEvents: analysis.keyEvents,
+            summary: analysis.summary,
+            people: analysis.people,
+          } : null
+        };
+      })
+    );
+
+    res.status(200).json(storiesWithMedia);
+  } catch (error) {
+    console.error("Error searching by AI tags:", error);
+    res.status(500).json({
+      message: "Error searching stories",
+      error: error.message,
+    });
+  }
+};
+
+// =================== GET ALL AVAILABLE AI TAGS ===================
+export const getAllTags = async (req, res) => {
+  try {
+    const userFamilyCircle = req.user.familyCircle;
+
+    if (!userFamilyCircle) {
+      return res.status(400).json({
+        message: "User is not part of any family circle",
+      });
+    }
+
+    // Import StoryAnalysis model
+    const StoryAnalysis = (await import("../models/StoryAnalysis.model.js")).default;
+
+    // Get all stories in user's family circle
+    const familyStories = await Story.find({ 
+      familyCircle: userFamilyCircle 
+    }).select("_id");
+
+    const storyIds = familyStories.map(s => s._id);
+
+    // Aggregate tags only from user's family stories
+    const result = await StoryAnalysis.aggregate([
+      {
+        $match: { storyId: { $in: storyIds } }
+      },
+      {
+        $facet: {
+          themes: [
+            { $unwind: "$themes" },
+            { $group: { _id: "$themes", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ],
+          emotions: [
+            { $unwind: "$emotions" },
+            { $group: { _id: "$emotions", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+          ],
+          timePeriods: [
+            { $group: { _id: "$timePeriod" } },
+            { $match: { _id: { $ne: "unknown" } } },
+            { $sort: { _id: 1 } },
+          ],
+          lifeStages: [
+            { $group: { _id: "$lifeStage" } },
+            { $match: { _id: { $ne: "unknown" } } },
+            { $sort: { _id: 1 } },
+          ],
+          locations: [
+            { $unwind: "$locations" },
+            { $group: { _id: "$locations", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 20 }
+          ],
+        },
+      },
+    ]);
+
+    const response = {
+      themes: result[0].themes.map((t) => t._id),
+      emotions: result[0].emotions.map((e) => e._id),
+      timePeriods: result[0].timePeriods.map((tp) => tp._id),
+      lifeStages: result[0].lifeStages.map((ls) => ls._id),
+      locations: result[0].locations.map((l) => l._id),
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error("Error getting all tags:", error);
+    res.status(500).json({
+      message: "Error fetching tags",
+      error: error.message,
+    });
+  }
+};
+// =================== SEARCH STORIES BY TAGS (AI) ===================
+// export const searchStoriesByTags = async (req, res) => {
+//   try {
+//     const { theme, emotion, timePeriod, lifeStage, location } = req.query;
+//     const userFamilyCircle = req.user.familyCircle;
+
+//     if (!userFamilyCircle) {
+//       return res.status(400).json({
+//         message: "User is not part of any family circle",
+//       });
+//     }
+
+//     console.log("🔍 AI Search filters:", { theme, emotion, timePeriod, lifeStage, location });
+
+//     // Import StoryAnalysis model dynamically
+//     const StoryAnalysis = (await import("../models/StoryAnalysis.model.js")).default;
+
+//     // Build query for StoryAnalysis
+//     const query = {};
+//     if (theme) query.themes = theme;
+//     if (emotion) query.emotions = emotion;
+//     if (timePeriod) query.timePeriod = timePeriod;
+//     if (lifeStage) query.lifeStage = lifeStage;
+//     if (location) query.locations = location;
+
+//     console.log("📋 Analysis query:", query);
+
+//     // Find matching analyses
+//     const analyses = await StoryAnalysis.find(query).lean();
+//     console.log(`📊 Found ${analyses.length} matching analyses`);
+
+//     if (analyses.length === 0) {
+//       return res.status(200).json([]);
+//     }
+
+//     // Get story IDs from analyses
+//     const storyIds = analyses.map(a => a.storyId);
+
+//     // Get stories that match AND are in user's family circle
+//     const stories = await Story.find({
+//       _id: { $in: storyIds },
+//       familyCircle: userFamilyCircle
+//     })
+//       .populate("author", "name email profilePicture")
+//       .sort({ createdAt: -1 })
+//       .lean();
+
+//     console.log(`📚 Found ${stories.length} stories in user's family`);
+
+//     // Get media for each story and attach analysis
+//     const storiesWithMedia = await Promise.all(
+//       stories.map(async (story) => {
+//         const media = await Media.find({ associatedStory: story._id }).lean();
+//         const analysis = analyses.find(a => a.storyId.toString() === story._id.toString());
+        
+//         return {
+//           ...story,
+//           media,
+//           analysis: analysis ? {
+//             themes: analysis.themes,
+//             emotions: analysis.emotions,
+//             timePeriod: analysis.timePeriod,
+//             lifeStage: analysis.lifeStage,
+//             locations: analysis.locations,
+//             keyEvents: analysis.keyEvents,
+//             summary: analysis.summary,
+//             people: analysis.people,
+//             confidence: analysis.confidence,
+//             analyzedAt: analysis.analyzedAt,
+//           } : null
+//         };
+//       })
+//     );
+
+//     res.status(200).json(storiesWithMedia);
+//   } catch (error) {
+//     console.error("❌ Error searching by AI tags:", error);
+//     res.status(500).json({
+//       message: "Error searching stories by tags",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// =================== GET ALL AVAILABLE AI TAGS ===================
+// export const getAllTags = async (req, res) => {
+//   try {
+//     const userFamilyCircle = req.user.familyCircle;
+
+//     if (!userFamilyCircle) {
+//       return res.status(400).json({
+//         message: "User is not part of any family circle",
+//       });
+//     }
+
+//     console.log("🏷️ Getting all AI tags for family circle:", userFamilyCircle);
+
+//     // Import StoryAnalysis model dynamically
+//     const StoryAnalysis = (await import("../models/StoryAnalysis.model.js")).default;
+
+//     // Get all stories in user's family circle
+//     const familyStories = await Story.find({ 
+//       familyCircle: userFamilyCircle 
+//     }).select("_id");
+
+//     const storyIds = familyStories.map(s => s._id);
+
+//     console.log(`📚 Found ${storyIds.length} stories in family circle`);
+
+//     // Aggregate tags only from user's family stories
+//     const result = await StoryAnalysis.aggregate([
+//       {
+//         $match: { storyId: { $in: storyIds } }
+//       },
+//       {
+//         $facet: {
+//           themes: [
+//             { $unwind: "$themes" },
+//             { $group: { _id: "$themes", count: { $sum: 1 } } },
+//             { $sort: { count: -1 } },
+//           ],
+//           emotions: [
+//             { $unwind: "$emotions" },
+//             { $group: { _id: "$emotions", count: { $sum: 1 } } },
+//             { $sort: { count: -1 } },
+//           ],
+//           timePeriods: [
+//             { $group: { _id: "$timePeriod" } },
+//             { $match: { _id: { $ne: "unknown" } } },
+//             { $sort: { _id: 1 } },
+//           ],
+//           lifeStages: [
+//             { $group: { _id: "$lifeStage" } },
+//             { $match: { _id: { $ne: "unknown" } } },
+//             { $sort: { _id: 1 } },
+//           ],
+//           locations: [
+//             { $unwind: "$locations" },
+//             { $group: { _id: "$locations", count: { $sum: 1 } } },
+//             { $sort: { count: -1 } },
+//             { $limit: 20 }
+//           ],
+//         },
+//       },
+//     ]);
+
+//     const response = {
+//       themes: result[0]?.themes?.map((t) => t._id) || [],
+//       emotions: result[0]?.emotions?.map((e) => e._id) || [],
+//       timePeriods: result[0]?.timePeriods?.map((tp) => tp._id) || [],
+//       lifeStages: result[0]?.lifeStages?.map((ls) => ls._id) || [],
+//       locations: result[0]?.locations?.map((l) => l._id) || [],
+//     };
+
+//     console.log("✅ Returning tags:", {
+//       themes: response.themes.length,
+//       emotions: response.emotions.length,
+//       timePeriods: response.timePeriods.length,
+//       lifeStages: response.lifeStages.length,
+//       locations: response.locations.length,
+//     });
+
+//     res.status(200).json(response);
+//   } catch (error) {
+//     console.error("❌ Error getting all tags:", error);
+//     res.status(500).json({
+//       message: "Error fetching AI tags",
+//       error: error.message,
+//     });
+//   }
+// };

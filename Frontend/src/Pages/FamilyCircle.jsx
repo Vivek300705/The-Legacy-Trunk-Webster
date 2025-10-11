@@ -14,6 +14,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import {
   FamilyRestroom,
@@ -22,6 +23,8 @@ import {
   PersonAdd,
   ArrowForward,
   Email,
+  CheckCircle,
+  Error as ErrorIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import {
@@ -41,6 +44,7 @@ const FamilyCircleWizard = () => {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [invitationResults, setInvitationResults] = useState([]);
 
   // Validate email
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -84,20 +88,62 @@ const FamilyCircleWizard = () => {
   const handleSendInvitations = async () => {
     if (!familyCircle) return;
 
+    // If no invites to send, skip to overview
+    if (inviteList.length === 0) {
+      setStep(3);
+      return;
+    }
+
     setLoading(true);
+    setError("");
+    const results = [];
+
     try {
-      await Promise.all(
-        inviteList.map((email) => inviteMember(familyCircle._id, email))
-      );
-      // Fetch updated invites
-      const invites = await getCircleInvitations(familyCircle._id);
-      setPendingInvitations(invites);
-      // Load full circle info
-      const updated = await getFamilyCircle(familyCircle._id);
-      setFamilyCircle(updated);
+      // Send invitations one by one and track results
+      for (const email of inviteList) {
+        try {
+          await inviteMember(familyCircle._id, email);
+          results.push({ email, success: true });
+        } catch (err) {
+          results.push({
+            email,
+            success: false,
+            error: err.response?.data?.message || "Failed to send",
+          });
+        }
+      }
+
+      setInvitationResults(results);
+
+      // Fetch updated invites and circle info
+      try {
+        const invites = await getCircleInvitations(familyCircle._id);
+        setPendingInvitations(invites);
+      } catch (err) {
+        console.error("Error fetching invitations:", err);
+      }
+
+      try {
+        const updated = await getFamilyCircle(familyCircle._id);
+        setFamilyCircle(updated);
+      } catch (err) {
+        console.error("Error fetching circle:", err);
+      }
+
+      // Check if all were successful
+      const allSuccess = results.every((r) => r.success);
+      if (!allSuccess) {
+        const failedCount = results.filter((r) => !r.success).length;
+        setError(
+          `${failedCount} invitation${
+            failedCount > 1 ? "s" : ""
+          } failed to send. See details below.`
+        );
+      }
+
       setStep(3);
     } catch (err) {
-      setError(err.response?.data?.message || "Error sending invitations");
+      setError("Error sending invitations");
     } finally {
       setLoading(false);
     }
@@ -155,7 +201,9 @@ const FamilyCircleWizard = () => {
               size="large"
               disabled={loading}
               sx={{ mt: 3 }}
-              endIcon={<ArrowForward />}
+              endIcon={
+                loading ? <CircularProgress size={20} /> : <ArrowForward />
+              }
             >
               {loading ? "Creating..." : "Continue"}
             </Button>
@@ -176,6 +224,7 @@ const FamilyCircleWizard = () => {
                   handleAddEmail();
                 }
               }}
+              placeholder="Enter email address and press Enter"
               InputProps={{
                 endAdornment: (
                   <IconButton
@@ -191,14 +240,30 @@ const FamilyCircleWizard = () => {
             {inviteList.length > 0 && (
               <>
                 <Divider sx={{ my: 2 }} />
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
+                  Emails to invite ({inviteList.length}):
+                </Typography>
                 <List>
                   {inviteList.map((email, i) => (
-                    <ListItem key={i}>
+                    <ListItem
+                      key={i}
+                      sx={{
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        mb: 1,
+                      }}
+                    >
                       <ListItemText primary={email} />
                       <ListItemSecondaryAction>
                         <IconButton
                           onClick={() => handleRemoveEmail(email)}
                           color="error"
+                          size="small"
                         >
                           <Delete />
                         </IconButton>
@@ -210,16 +275,29 @@ const FamilyCircleWizard = () => {
             )}
             <Box sx={{ mt: 3, display: "flex", gap: 2 }}>
               <Button
-                variant="contained"
+                variant="outlined"
                 fullWidth
                 disabled={loading}
+                onClick={() => {
+                  setStep(3);
+                }}
+              >
+                Skip for Now
+              </Button>
+              <Button
+                variant="contained"
+                fullWidth
+                disabled={loading || inviteList.length === 0}
                 onClick={handleSendInvitations}
+                startIcon={
+                  loading ? <CircularProgress size={20} /> : <PersonAdd />
+                }
               >
                 {loading
                   ? "Sending..."
-                  : inviteList.length
-                  ? `Send ${inviteList.length} Invitations`
-                  : "Skip"}
+                  : `Send ${inviteList.length} Invitation${
+                      inviteList.length !== 1 ? "s" : ""
+                    }`}
               </Button>
             </Box>
           </Box>
@@ -228,30 +306,67 @@ const FamilyCircleWizard = () => {
         {/* Step 3: Overview */}
         {step === 3 && (
           <Box>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               {familyCircle?.name}
             </Typography>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+
+            {/* Show invitation results if available */}
+            {invitationResults.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Invitation Results:
+                </Typography>
+                {invitationResults.map((result, idx) => (
+                  <Alert
+                    key={idx}
+                    severity={result.success ? "success" : "error"}
+                    icon={result.success ? <CheckCircle /> : <ErrorIcon />}
+                    sx={{ mb: 1 }}
+                  >
+                    <strong>{result.email}</strong> -{" "}
+                    {result.success ? "Invitation sent" : result.error}
+                  </Alert>
+                ))}
+              </Box>
+            )}
+
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
               Members:
             </Typography>
-            <List>
-              {familyCircle?.members?.map((m) => (
-                <ListItem key={m._id}>
-                  <ListItemText primary={m.name} secondary={m.email} />
-                </ListItem>
-              ))}
-            </List>
+            {familyCircle?.members && familyCircle.members.length > 0 ? (
+              <List>
+                {familyCircle.members.map((m) => (
+                  <ListItem
+                    key={m._id}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <ListItemText primary={m.name} secondary={m.email} />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                You are the first member of this circle.
+              </Typography>
+            )}
 
             {pendingInvitations.length > 0 && (
               <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                   Pending Invitations ({pendingInvitations.length})
                 </Typography>
                 <Grid container spacing={2}>
                   {pendingInvitations.map((invite) => (
                     <Grid item xs={12} sm={6} key={invite._id}>
                       <Alert severity="info" icon={<Email />}>
-                        <Typography variant="body2">{invite.email}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {invite.email}
+                        </Typography>
                         <Typography variant="caption" color="text.secondary">
                           Invited by {invite.invitedBy?.name}
                         </Typography>
@@ -262,13 +377,22 @@ const FamilyCircleWizard = () => {
               </Box>
             )}
 
-            <Button
-              sx={{ mt: 3 }}
-              variant="contained"
-              onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
-            >
-              Go to Circle Page
-            </Button>
+            <Box sx={{ mt: 4, display: "flex", gap: 2 }}>
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => navigate("/dashboard")}
+              >
+                Go to Dashboard
+              </Button>
+              <Button
+                variant="contained"
+                fullWidth
+                onClick={() => navigate(`/family-circle/${familyCircle._id}`)}
+              >
+                Go to Circle Page
+              </Button>
+            </Box>
           </Box>
         )}
       </Paper>
