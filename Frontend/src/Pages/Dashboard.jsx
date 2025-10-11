@@ -24,7 +24,7 @@ import { useSelector, useDispatch } from "react-redux";
 import api from "../api/axiosConfig";
 import { setMongoUser } from "../store/slice/authSlice";
 import MemoryPrompt from '../components/MemoryPrompt';
-import { exportStoriesPDF } from "../api/services"; // 👈 2. Import the new API service
+import { exportStoriesPDF } from "../api/services";// 👈 2. Import the new API service
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -295,7 +295,6 @@ const Dashboard = () => {
           </Card>
         )}
       </Box>
-
       {!isNewUser && recentStories.length > 0 && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
